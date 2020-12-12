@@ -53,9 +53,17 @@ start:		.org U2
     ldA #00000000b
     stA segmentData
 
-    ldA #$07
-    stA p1a+1
-    stA p3a+2
+    ;ldA #$07
+    ;stA p1a+1
+    ;stA p3a+2
+    ldX #digit1
+    ldA #$30
+seed:
+    stA 0, X
+    adc #1
+    inX
+    cpX #digit40
+    bne seed
 
 ; todo
 
@@ -79,46 +87,95 @@ irq:
         ldA #32
         stA U5_timer
 
+        ; load lower nibble
         ldX curDigit
-
-        ; turn off all segments
-        ldA #$FF
+        ifeq
+            ldA #00000001b
+        else
+            ldA digit1-2, X
+            and #00001111b
+        endif
         stA U5b
 
-        ; turn off segment strobes
-        ldA U5a
-        and #10001111b
-        stA U5a
-        orA #01110000b
-        stA U5a
-
-        ; ldA curDigit+0
-        ldA U5a
-        and #10001111b
+        ; latch it
+        ;ldA U5a
+        ;orA #00010000b
+        ;stA U5a
+        ;and #11101111b
+        ;stA U5a     
+        ldA #00000000b
         stA U5a
 
-        ; load in P1 segments
-        ldA p1a, X
-        orA #01110000b ; turn off 1s
+        ; load high nibble
+        ldX curDigit
+        ifeq
+            ldA #00000000b
+        else
+            ldA digit1-2, X
+            and #11110000b
+            lsr A
+            lsr A
+            lsr A
+            lsr A
+        endif
         stA U5b
 
-        ; latch in P1 segments
-        ldA curDigit+0
+        ; latch it
+        ldA #00110000b
+        stA U5a
+       
+        ; latch digit to display
+        ldA U5b
         orA #00010000b
-        stA U5a
-
-        ; load in P3 segments
-        ldA p3a, X
-        orA #01110000b ; turn off 1s
         stA U5b
 
-        ; set segment and latch P3 segments
-        ldA curDigit+0
-        orA #00100000b
+        
+
+        ; now repeat for lower display
+        ; load lower nibble
+        ldX curDigit
+        ifeq
+            ldA #00000001b
+        else
+            ldA digit21-2, X
+            and #00001111b
+        endif
+        stA U5b
+
+        ; latch it
+        ;ldA U5a
+        ;orA #00010000b
+        ;stA U5a
+        ;and #11101111b
+        ;stA U5a     
+        ldA #00000000b
         stA U5a
+
+        ; load high nibble
+        ldX curDigit
+        ifeq
+            ldA #00000000b
+        else
+            ldA digit21-2, X
+            and #11110000b
+            lsr A
+            lsr A
+            lsr A
+            lsr A
+        endif
+        stA U5b
+
+        ; latch it
+        ldA #00110000b
+        stA U5a
+       
+        ; latch digit to display
+        ldA U5b
+        orA #00100000b
+        stA U5b
 
         inX
-        cpX #12
+        cpX #22
         ifeq
             ldX #0
         endif
