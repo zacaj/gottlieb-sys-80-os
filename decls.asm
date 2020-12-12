@@ -7,7 +7,13 @@ curLamp:        .equ $001C ; + 1-12
 lampTemp:       .equ $001E
 p1a:            .equ $0020
 p1f:            .equ $0025
-curDigit:       .equ $0026 ; +  0-15
+p2a:            .equ $0026
+p2f:            .equ $002C
+p3a:            .equ $002D
+p3f:            .equ $0032
+p4a:            .equ $0033
+p4f:            .equ $0038
+curDigit:       .equ $0039 ; +  0-15
 
 U4:             .equ $0200  ; 0200-021F	U4 registers, switch matrix
 U5:             .equ $0280   ; 0280-029F	U5 registers, display

@@ -55,6 +55,7 @@ start:		.org U2
 
     ldA #$07
     stA p1a+1
+    stA p3a+2
 
 ; todo
 
@@ -75,29 +76,52 @@ irq:
     ldA #10000000b
     bit U5_irq
     ifne
-        ldA #64
+        ldA #32
         stA U5_timer
 
         ldX curDigit
 
+        ; turn off all segments
+        ldA #$FF
+        stA U5b
+
+        ; turn off segment strobes
+        ldA U5a
+        and #10001111b
+        stA U5a
+        orA #01110000b
+        stA U5a
+
+        ; ldA curDigit+0
         ldA U5a
         and #10001111b
         stA U5a
 
+        ; load in P1 segments
         ldA p1a, X
-        orA #01110000b
+        orA #01110000b ; turn off 1s
         stA U5b
 
-        inX
-        cpX #6
-        ifeq
-            ldX #0
-        endif
-
+        ; latch in P1 segments
         ldA curDigit+0
         orA #00010000b
         stA U5a
 
+        ; load in P3 segments
+        ldA p3a, X
+        orA #01110000b ; turn off 1s
+        stA U5b
+
+        ; set segment and latch P3 segments
+        ldA curDigit+0
+        orA #00100000b
+        stA U5a
+
+        inX
+        cpX #12
+        ifeq
+            ldX #0
+        endif
         stX curDigit   
     endif
 
