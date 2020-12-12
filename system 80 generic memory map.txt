@@ -1,0 +1,235 @@
+;system 80 memory map
+;also covers most of 80a, differences noted
+
+0000-007F	U4 RAM
+0080-00FF	U5 RAM
+
+0008		# of iterations of $0A to add
+0009		timer
+000A		addend factor
+000C		attract mode timer
+000D		segment clock control
+000E		'h' segment control
+000F		digit strobe
+
+0012		hstd display timer
+0013-0014	dispatch vectors for scripts/switches
+0015-0016	current active switch set pointer
+0017		save switch element counter X (set)
+0018		save switch element counter Y (element)
+0019		current # of players
+001A-001B	current player up score location pointer
+001C		score modifier
+001C		decoded 10s power in score byte
+001C		digit pair to add contents of $0A times interations in $08
+	00		operation is on 10's, 1's
+	01		operation is on 1k, 100's
+	02		operation is on 100k, 10k
+001D		status byte
+				b7=score flag, set=no score, clear=score
+				b3-b0=currently up player 0=p1, 1=p2, 2=p3, 3=p4
+001E		solenoid/sound effect waiting to fire ??
+001F		add/subtract factor
+0020		solenoid/sound effect waiting to fire ??
+0021		00-FF counter
+0022-0023	current script pointer
+0025		extra ball flag 00=none, 01=extra ball waiting
+0026		save for lamp parameter
+0027		max credits
+0028		dips 25-32 (most significant bit is dip 25)
+0029		dips 17-24
+002A		dips 9-16
+002B		dips 1-8
+002C		left coin chute setting
+002D		middle coin chute setting
+002E		right coin chute setting
+0032		credits due
+0033		temporary X storage
+0036		temporary Y storage
+003C-003E	hstd
+003F-0041	highest player score from game if hstd beaten
+0042		current credits
+0043		balls per game
+0044		save X for lamp update routine
+0045		save Y for lamp update routine
+0046		sign bit set when in active game
+004A		storage spot for nvram handling
+004B		copy 2 for nvram handling
+004C		copy 1 for nvram handling
+004F-0050	nvram address pointer
+0050		decoded lamp for 5x functions
+0054		saved split mask
+0054		audit/test level
+005A		score modifier based on <something>
+005E		??
+005F-0060	pointer to player save area
+0060-006B	script setup parameters
+	0061-0062	pointer to current up player save area
+	0063-0064	pointer to current up player save area
+	0063-0064	pointer for lamp strings
+	0065	flag to skip next valid TGOL command
+	0066	first parameter from script
+	0067	second parameter from script
+	0068	third parameter from script
+0065		saved Y, update lamp ok flag
+0067		temporary Y save during hstd checking
+0069		results were zero
+006A		boolean results (00/01) /2x test
+006B		boolean results /1x test ??
+006C		temporary location for lamp
+006F		index for attract mode ??
+0071		match
+0072		game over flag, 00=game over !00=in a game
+0074		slam flag, 00=slam, !00=ok
+0075-0077	current players' score at start of ball
+0078		??
+0079-007C	lamp string status/temporaries strings 0-3
+0083		special flag
+0084		extra ball flag
+0085		player 1 replays won current game
+0086		player 2 replays won current game
+0087		player 3 replays won current game
+0088		player 4 replays won current game
+008B-008C	save script pointer
+0091		playfield status
+	/08 always set
+	/10	extra ball awarded
+	/20 special awarded
+	/40 novelty mode active
+	/80 dip 25 status (balls per game, set=3, clear=5)
+0092		playfield status 2
+	/01
+0094		game timer (#$27=1 minute)
+009B		irq save contents of u4 drA (switch returns)
+009C-00A3	logical switch row 0-7
+00A4-00AB	closed switch row 0-7
+00AC-00CB	active switches col 0-7 low nibble even columns high nibble odd columns
+	00AC/01		c0r0
+	00AC/10		c1r0
+	00AD/01		c2r0
+	00AD/10		c3r0
+	00AE/01		c4r0
+	00AE/10		c5r0
+	00AF/01		c6r0
+	00AF/10		c7r0
+
+	00B0/01		c1r1
+	00B0/10		c2r1
+	~...
+	00CB/01		c6r7
+	00CB/10		c7r7
+
+00CC-00CF	bounding limits for lamp strings, cc=lower lamp, cd=upper lamp, ce=modifier, cf=string ??
+00CC-00CE	scratch ram, holds player score after math operation
+00CC		current displayed digit during digit test 18
+00CD		current digit position during digit test 18
+00CF-00D1	scratch ram, for player score
+
+00D0		temporary save for lamp string number in 4x routine
+00D1		lamp string first lamp +09
+
+display bcd data:
+00D2-00D4	P1 10-1/1k-100/100k/10k digits
+00D5-00D7	P2 10-1/1k-100/100k/10k digits
+00D8-00DA	P3 10-1/1k-100/100k/10k digits
+00DB-00DD	P4 10-1/1k-100/100k/10k digits
+00DE-00E0	P5 10-1/1k-100/100k/10k digits
+00E1-00E3	P6 10-1/1k-100/100k/10k digits
+00E4		ball in play/match display
+00E5		credit display
+
+display control:
+00E6		current display base
+00E8-00EF
+00EB
+00EF
+00F0-00F2	valid display base pointer (base location to pull display data from)
+00F3-00FE	lamp matrix, upper nibble=strobe, lower nibble=lamp
+	00F3	lamps 0-3
+	00F4	lamps 4-7
+	00F5	lamps 8-11
+	00F6	lamps 12-15
+	00F7	lamps 16-19
+	00F8	lamps 20-23
+	00F9	lamps 24-27
+	00FA	lamps 28-31
+	00FB	lamps 32-35
+	00FC	lamps 36-39
+	00FD	lamps 40-43
+	00FE	lamps 44-47
+
+0100-017F	U6 RAM
+
+0100-0142	save areas
+	games without generic area:
+	0100-0109	p1 save area
+	010A-0113	p2 save area
+	0114-011D	p3 save area
+	011E-0127	p4 save area
+	0128-0131	p5 save area		*expansion?
+	0132-013C	p6 save area		*expansion?
+	
+	games with generic area:
+	0100-0105	generic save area	*some games
+	0106-010F	p1 save area
+	0110-0119	p2 save area
+	011A-0123	p3 save area
+	0124-012D	p4 save area
+	012E-0137	p5 save area		*expansion?
+	0138-0142	p6 save area		*expansion?
+
+	013C-0145	temporary storage for status of lamp strings
+
+0146-017F	stack
+
+0200-021F	U4 registers, switch matrix
+0280-029F	U5 registers, display
+0300-031F	U6 registers, solenoids/sounds/dip control
+
+GAMEROM
+1000-17FF
+
+1000-1007	col 0 switch table (lo byte only, hi byte is $10xx)
+100F		max players in game
+1010-1017	col 1 switch table (lo byte only, hi byte is $10xx)
+101B		exit point for rts 08 (lo byte only, hih byte is $10xx)
+1020-1027	col 2 switch table (lo byte only, hi byte is $10xx)
+1030-1037	col 3 switch table (lo byte only, hi byte is $10xx)
+1040-1047	col 4 switch table (lo byte only, hi byte is $10xx)
+1050-1057	col 5 switch table (lo byte only, hi byte is $10xx)
+1060-1067	col 6 switch table (lo byte only, hi byte is $10xx)
+1070-1077	col 7 switch table (lo byte only, hi byte is $10xx)
+
+1200		slam flag, 0=handle in gamerom, !0=handle in OS rom
+1201		gamerom slam routine (if set)
+
+5101 NVRAM	-	note: contents in triplicate for safety.  Any 2 same=treated (and corrected) at bootup as correct value
+1800-18FF	lower nibble only, upper tied low
+
+1848-1849	current hstd 10-1 digits (stored 1-10)		(80a: 100-10)
+189D-189E	current hstd 10-1 digits 2nd copy
+18F2-18F3	current hstd 10-1 digits 3rd copy
+
+184A-184B	current hstd 1k-100 digits (stored 100-1k)	(80a: 10k-1k)
+189F-18A0	current hstd 1k-100 digits 2nd copy
+18F4-18F5	current hstd 1k-100 digits 3rd copy
+
+184C-184D	current hstd 100k-10k digits (stored 10k-100k)	(80a: 1m-100k)
+18A1-18A2	current hstd 100k-10k digits 2nd copy
+18F6-18F7	current hstd 100k-10k digits 3rd copy
+
+184E-184F	current credits (low/hi)
+18A3-18A4	current credits 2nd copy
+18F8-18F9	current credits 3rd copy
+
+1850-1854	audit 15 avg. game time (might not be 5 wide....)
+18A5-18A9	audit 15 2nd copy
+18F9-18FF	audit 15 3rd copy
+OSROM
+2000-3FFF
+
+23B2		coin switch (all)
+2616		slam switch
+27C2		credit button
+2A43		tilt switch
+3611		advance script pointer in $22-23
