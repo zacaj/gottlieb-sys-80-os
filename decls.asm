@@ -3,7 +3,8 @@ RAM:			.equ $0000  ; thru 017F
 stackBottom:    .equ $017F
 lamp1:          .equ $0010
 lamp12:         .equ lamp1 + 11
-lampTimer:      .equ $001C
+curLamp:        .equ $001C ; + 1-12
+lampTemp:       .equ $001E
 p1a:            .equ $0020
 p1f:            .equ $0025
 curDigit:       .equ $0026 ; +  0-15

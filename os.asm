@@ -18,13 +18,29 @@ start:		.org U2
     stA lampData
 
 
-    ldA #11101001b
-    stA lampData
+    ;ldA #11101001b
+    ;stA lampData
     ;ldA #00000001b
     ;stA lampData
 
-    ldA #0
-    stA lampTimer
+    ldA #$10
+    stA lamp1+0
+    adc #$10
+    stA lamp1+1
+    adc #$10
+    stA lamp1+2
+    adc #$10
+    stA lamp1+3
+    adc #$10
+    stA lamp1+4
+    adc #$10
+    stA lamp1+5
+    adc #$10
+    stA lamp1+6
+    adc #$10
+    stA lamp1+7
+    adc #$10
+    stA lamp1+8
 
 ; lets start another riot
     ldA #01111111b
@@ -89,22 +105,40 @@ irq:
     ldA #10000000b
     bit U6_irq
     ifne
-        ldA #255
+        ldA #255/20
         stA U6_timer
 
-        inc lampTimer
+        ldX curLamp
 
-        ldA #00000001b
-        bit lampTimer
-        ifeq
-            ldA #00101001b
-        else
-            ldA #00100110b
-        endif
+        ldA curLamp+0
+        asl A
+        asl A
+        asl A
+        asl A
+        stA lampTemp
+        ldA lamp1-1, X
+        and #00001111b
+        orA lampTemp
         stA lampData
 
-        ldA #00000000b
-        stA lampData        
+        and #00001111b
+        stA lampData
+
+        ldA lamp1-1, X
+        lsr A
+        lsr A
+        lsr A
+        lsr A
+        eor lamp1-1, X
+        stA lamp1-1, X
+
+        inX
+        cpX #13
+        ifeq
+            ldX #1
+        endif
+        stX curLamp     
+
     endif
     rti
 
