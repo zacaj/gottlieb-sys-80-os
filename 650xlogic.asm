@@ -63,6 +63,7 @@ loc		.equ	$00
 #defcont		\ .pop type, loc
 #defcont		\#if (type & FLAG_BEGIN)==0 
 #defcont			\#if (type & FLAG_ELSE)==0	
+;#defcont                \ .error "no"
 #defcont  				\var2_ .set var1_-loc-2
 #defcont				\#if var2_+127 < 0
 #defcont					\ .error "Branch Range < -127"
@@ -78,7 +79,8 @@ loc		.equ	$00
 #defcont					\#endif
 #defcont				\#endif
 #defcont			\#else	
-#defcont    			\ .org  loc-2	
+;#defcont                \ .error "no2"
+#defcont    			\ .org  loc	
 #defcont				\ .word var1_
 #defcont			\#endif
 #defcont			\ .org	var1_
@@ -99,8 +101,8 @@ loc		.equ	$00
 #defcont			\#if (type & FLAG_ELSE)==0
 #defcont				\ .org loc+1
 #defcont	      		\#if x==0
-#defcont					\var2_ .set var1_-loc-2+3
-#defcont							\.push var1_, FLAG_ELSE
+#defcont					\var2_ .set var1_-loc-2+3 
+#defcont							\.push var1_+1, FLAG_ELSE
 #defcont							\ .byte var2_
 #defcont							\ .org var1_
 #defcont							\ jmp $
