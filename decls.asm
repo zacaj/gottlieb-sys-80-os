@@ -15,6 +15,7 @@ U5a_dir:        .equ U5+$01
 U5b:            .equ U5+$02
 U5b_dir:        .equ U5+$03
 U5_timer:       .equ U5+$1E
+U5_irq:         .equ U5+$05
 digitData:      .equ U5a ; 0-3: select digit 0-15.  4-6: strobe segment group A-C.  7: ignore
 digitDir:       .equ U5a_dir
 segmentData:    .equ U5b ; 0-3: BCD segments. 4-6: 1s segment for segment group A-C. 7: sw enable (keep low)
@@ -25,6 +26,7 @@ U6a_dir:        .equ U6+$01
 U6b:            .equ U6+$02
 U6b_dir:        .equ U6+$03
 U6_timer:       .equ U6+$1F
+U6_irq:         .equ U6+$05
 lampData:       .equ U6b
 lampDir:        .equ U6b_dir
 solData:        .equ U6a

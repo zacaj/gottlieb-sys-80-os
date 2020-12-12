@@ -55,49 +55,57 @@ loop:
     jmp loop
 
 irq:
-;    ldX curDigit
-;
-;    ldA U5a
-;    and #10001111b
-;    stA U5a
-;
-;    ldA p1a, X
-;    ;and #10001111b
-;    orA #01110000b
-;    stA U5b
-;
-;    inX
-;    cpX #6
-;    ifeq
-;        ldX #0
-;    endif
-;
-;    ldA curDigit+0
-;    orA #00010000b
-;    stA U5a
-;
-;    stX curDigit
-;    
-;    ldA #64
-;    stA U5_timer
+    ; update displays
+    ldA #10000000b
+    bit U5_irq
+    ifne
+        ldA #64
+        stA U5_timer
 
-    inc lampTimer
+        ldX curDigit
 
-    ldA #00000001b
-    bit lampTimer
-    ifeq
-        ldA #00101001b
-    else
-        ldA #00100110b
+        ldA U5a
+        and #10001111b
+        stA U5a
+
+        ldA p1a, X
+        orA #01110000b
+        stA U5b
+
+        inX
+        cpX #6
+        ifeq
+            ldX #0
+        endif
+
+        ldA curDigit+0
+        orA #00010000b
+        stA U5a
+
+        stX curDigit   
     endif
-    stA lampData
 
-    ldA #00000000b
-    stA lampData
+    ; update lamps
+    ldA #10000000b
+    bit U6_irq
+    ifne
+        ldA #255
+        stA U6_timer
 
-    
-    ldA #255
-    stA U6_timer
+        inc lampTimer
+
+        ldA #00000001b
+        bit lampTimer
+        ifeq
+            ldA #00101001b
+        else
+            ldA #00100110b
+        endif
+        stA lampData
+
+        ldA #00000000b
+        stA lampData        
+    endif
     rti
 
 uhhh:
