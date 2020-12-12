@@ -2,6 +2,8 @@
 
 #include "decls.asm"
 
+#include "game.asm"
+
 start:		.org U2
     ldX stackBottom
     txS
@@ -24,8 +26,6 @@ start:		.org U2
     ;stA lampData
 
     ldA #$10
-    stA lamp1+0
-    adc #$10
     stA lamp1+1
     adc #$10
     stA lamp1+2
@@ -41,6 +41,8 @@ start:		.org U2
     stA lamp1+7
     adc #$10
     stA lamp1+8
+    adc #$10
+    stA lamp1+9
 
 ; lets start another riot
     ldA #01111111b
@@ -65,26 +67,156 @@ seed:
     cpX #digit40
     bne seed
 
+; a RIOT
+    ldA #00000000b
+    stA U4a_dir
+
+    ldA #11111111b
+    stA U4b_dir
+    ldA #00000001b
+    stA strobes
+
 ; todo
+
+    ldX #queueLow
+    stX curQueueStart
+    stX curQueueEnd
 
     clI
 
     ldA #255
     stA U6_timer
 
-    ;ldA #255
-    ;stA U5_timer
+    ldA #255
+    stA U5_timer
+
+    ldA #255
+    stA U4_timer
 
 loop:
-    nop
+    ldX curQueueStart
+    cpX curQueueEnd
+    ifne
+        ldA queueHigh-queueLow, X
+        ifne ; active address
+            ldA queueLeft-queueLow, X
+            ifeq ; timer expired
+                ldA queueHigh-queueLow, X 
+                stA queueTemp+0
+                ldA 0, X
+                stA queueTemp+1
+                ldA #0
+                stA queueHigh-queueLow, X
+                jmp (queueTemp)
+            endif
+        endif
+afterQueueRun:
+        ldX curQueueStart
+        inX 
+        cpX #queueLowEnd
+        ifeq
+            ldX #queueLow
+        endif
+        stX curQueueStart
+    endif
+
     jmp loop
 
-irq:
+irq: 
+    phA
+    tXA
+    phA
+    tYA
+    phA
+
+    ; update matrix
+    ldA #10000000b
+    bit U4_irq
+    ifne
+        ldA #10
+        stA U4_timer
+
+        ldX curSwitch
+
+        ldA returns
+        eor sswitch1, X ; 1 = switch not settled
+        eor #11111111b ; 1 = switch is settled
+        stA switchTemp 
+
+        ldA returns
+        eor switch1, X ; 1 = switch != new
+        and switchTemp ; 1 = switch != new AND is settled
+        stA switchTemp
+
+        ifne ; at least one switch in column changed
+            ldA curSwitch+0
+            asl A
+            asl A
+            asl A
+            asl A
+            tAY
+            ldA #00000001b
+l_switch:
+            bit switchTemp
+            ifne ; switch changed
+                phA
+                and switch1, X
+                ifeq ; was off, now on
+                    stY switchY
+                    ldA switchCallbacks+0, Y
+                    ldY curQueueEnd
+                    stA queueHigh-queueLow, Y
+                    ldY switchY
+                    ldA switchCallbacks+1, Y
+                    ldY curQueueEnd
+                    stA 0, Y
+                    ldA #0
+                    stA queueLeft-queueLow, Y
+                    inY
+                    cpY #queueLowEnd
+                    ifeq
+                        ldY #queueLow
+                    endif
+                    stY curQueueEnd
+                    ldY switchY
+                endif
+
+                plA
+                phA
+                eor switch1, X
+                stA switch1, X
+
+                plA
+            endif
+            inY
+            inY
+            asl A
+            bne l_switch
+        endif
+
+        ldA returns
+        stA sswitch1, X
+
+
+        ldA strobes
+        asl A
+        ifeq
+            ldA #00000001b
+        endif
+        stA strobes
+        inX
+        cpX #8
+        ifeq
+            ldX #0
+        endif
+        stX curSwitch  
+    endif 
+
     ; update displays
     ldA #10000000b
     bit U5_irq
     ifne
-        ldA #32
+        ldA #64
         stA U5_timer
 
         ; load lower nibble
@@ -221,6 +353,12 @@ irq:
         stX curLamp     
 
     endif
+
+    plA
+    tAY
+    plA
+    tAX
+    plA
     rti
 
 uhhh:
