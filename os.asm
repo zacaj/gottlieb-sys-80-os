@@ -17,7 +17,7 @@ l_clear:
     cpX stackBottom+1
     bne l_clear
 
-    ldX stackBottom-$100
+    ldX #stackBottom-$100
     tXS
 
 ; lets start a riot
@@ -26,10 +26,19 @@ l_clear:
     ldA #11111111b
     stA solDir
 
-    ldA #11110000b
+    ldA #00001111b
     stA lampData
     ldA #11111111b
     stA lampDir
+
+    ; test
+    ldA #00001111b
+    stA lampData
+    ldA #10101111b
+    stA lampData
+    ldA #00001111b
+    stA lampData
+
 
 
     ;ldA #11101001b
@@ -37,7 +46,7 @@ l_clear:
     ;ldA #00000001b
     ;stA lampData
 
-    ldA #$E0
+    ldA #10100000b
     ;stA lamp1+1
     ;adc #$10
     ;stA lamp1+2
@@ -73,36 +82,37 @@ l_clear:
 ; init parallel mode
     ; bring D4-7 high
     orA #00001111b
-    stA U5b
+    ;stA U5b
     ; latch it
     ldA U5a
     orA #00100000b
-    stA U5a
+    ;stA U5a
     and #11011111b
-    stA U5a  
+    ;stA U5a  
     ; lower  D4-7
     ldA U5b
     and #11110000b
-    stA U5b
+    ;stA U5b
     ; latch it
     ldA U5a
     orA #00100000b
-    stA U5a
+    ;stA U5a
     and #11011111b
-    stA U5a  
+    ;stA U5a  
     ; lower reset
     ldA U5b
     and #10111111b
     stA U5b
 
     ; bring D4-7 high
+    ldA U5b
     orA #00001111b
     stA U5b
     ; latch it
     ldA U5a
-    orA #00100000b
+    orA #00110000b
     stA U5a
-    and #11011111b
+    and #11001111b
     stA U5a  
     ; lower  D4-7
     ldA U5b
@@ -110,9 +120,9 @@ l_clear:
     stA U5b
     ; latch it
     ldA U5a
-    orA #00100000b
+    orA #00110000b
     stA U5a
-    and #11011111b
+    and #11001111b
     stA U5a  
 
 ; init display chips    
@@ -137,7 +147,7 @@ l_clear:
     stA digit1+5
 
 ; init  displays
-    ldA #00110000b
+    ldA #00010000b
     stA digitBit
     ldX #digit1-2
     ldA #8
@@ -160,7 +170,7 @@ seed:
     bne seed
 
 ; set initial display commands
-    ldA #01
+    ldA #$01
     stA digit1-2
     stA digit21-2
     ldA #$C0
@@ -170,13 +180,13 @@ seed:
     jsr refreshDisplays
 
 ; a RIOT
-    ldA #00000000b
-    stA U4a_dir
-
-    ldA #11111111b
-    stA U4b_dir
-    ldA #00000001b
-    stA strobes
+;    ldA #00000000b
+;    stA U4a_dir
+;
+;    ldA #11111111b
+;    stA U4b_dir
+;    ldA #00000001b
+;    stA strobes
 
 ; todo
 
@@ -184,16 +194,29 @@ seed:
     stX curQueueStart
     stX curQueueEnd
 
+
+
+    ; test
+    ldA #00001111b
+    stA lampData
+    ldA #10111111b
+    stA lampData
+    ldA #00001111b
+    stA lampData
+
+    ldA #255
+    stA U6_timer
+
     clI
 
     ldA #255
     stA U6_timer
 
-    ldA #255
-    stA U5_timer
+    ;ldA #255
+    ;stA U5_timer
 
-    ldA #255
-    stA U4_timer
+    ;ldA #255
+    ;stA U4_timer
 
 loop:
 ;    ldX curQueueStart
@@ -323,7 +346,7 @@ irq:
 
         ldX curLamp
 
-        ldA curLamp+0
+        ldA curLamp
         asl A
         asl A
         asl A
@@ -364,10 +387,10 @@ irq:
 
 uhhh:
     nop
-    jmp uhhh
+    rti
 interrupt2:
     nop
-    jmp interrupt2
+    rti
 
 pointers: 	.org U3end-7
 	.lsfirst		
