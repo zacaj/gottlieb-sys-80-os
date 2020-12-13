@@ -4,7 +4,11 @@
 
 #include "game.asm"
 
-start:		.org U2
+.org U2
+#include "disp80B.asm"
+
+start:	
+    clD  	
     ldX RAM
     ldA #0
 l_clear:
@@ -13,8 +17,8 @@ l_clear:
     cpX stackBottom+1
     bne l_clear
 
-    ldX stackBottom
-    txS
+    ldX stackBottom-$100
+    tXS
 
 ; lets start a riot
     ldA #11110000b
@@ -56,20 +60,93 @@ l_clear:
     stA lamp1+12
 
 ; lets start another riot
-    ldA #00000000b
-    stA digitData
     ldA #01111111b
     stA digitDir
     ldA #00000000b
-    stA digitData
+    stA U5a
 
-    ldA #01111111b
-    stA segmentData
     ldA #11111111b
     stA segmentDir
-    ldA #01111111b
-    stA segmentData
+    ldA #01110000b    ; reset on, LD off
+    stA U5b
 
+; init parallel mode
+    ; bring D4-7 high
+    orA #00001111b
+    stA U5b
+    ; latch it
+    ldA U5a
+    orA #00100000b
+    stA U5a
+    and #11011111b
+    stA U5a  
+    ; lower  D4-7
+    ldA U5b
+    and #11110000b
+    stA U5b
+    ; latch it
+    ldA U5a
+    orA #00100000b
+    stA U5a
+    and #11011111b
+    stA U5a  
+    ; lower reset
+    ldA U5b
+    and #10111111b
+    stA U5b
+
+    ; bring D4-7 high
+    orA #00001111b
+    stA U5b
+    ; latch it
+    ldA U5a
+    orA #00100000b
+    stA U5a
+    and #11011111b
+    stA U5a  
+    ; lower  D4-7
+    ldA U5b
+    and #11110000b
+    stA U5b
+    ; latch it
+    ldA U5a
+    orA #00100000b
+    stA U5a
+    and #11011111b
+    stA U5a  
+
+; init display chips    
+    ldA #$01
+    stA digit1-2
+    ldA #$08 ; normal display mode
+    stA digit1-1
+    
+    ldA #$01
+    stA digit1-0
+    ldA #$94 ; 20 digits
+    stA digit1+1
+    
+    ldA #$01
+    stA digit1+2
+    ldA #$06 ; digit time 32
+    stA digit1+3
+
+    ldA #$01
+    stA digit1+4
+    ldA #$0E ; start display
+    stA digit1+5
+
+; init  displays
+    ldA #00110000b
+    stA digitBit
+    ldX #digit1-2
+    ldA #8
+    stA curDigit
+    jsr refreshDisplay
+    
+
+
+; seed some display data
     ;ldA #$07
     ;stA p1a+1
     ;stA p3a+2
@@ -82,6 +159,16 @@ seed:
     cpX #digit40
     bne seed
 
+; set initial display commands
+    ldA #01
+    stA digit1-2
+    stA digit21-2
+    ldA #$C0
+    stA digit1-1
+    stA digit21-1
+
+    jsr refreshDisplays
+
 ; a RIOT
     ldA #00000000b
     stA U4a_dir
@@ -92,8 +179,6 @@ seed:
     stA strobes
 
 ; todo
-    ldA #00110000b
-    stA segmentData
 
     ldX #queueLow
     stX curQueueStart
@@ -228,110 +313,6 @@ irq:
 ;        endif
 ;        stX curSwitch  
 ;    endif 
-
-    ; update displays
-    ldA #10000000b
-    bit U5_irq
-    ifne
-        ldA #64
-        stA U5_timer
-
-        ; load lower nibble
-        ldX curDigit
-        ifeq
-            ldA #00000001b
-        else
-            ldA digit1-2, X
-            and #00001111b
-        endif
-        stA U5b
-
-        ; latch it
-        ;ldA U5a
-        ;orA #00010000b
-        ;stA U5a
-        ;and #11101111b
-        ;stA U5a     
-        ldA #00000000b
-        stA U5a
-
-        ; load high nibble
-        ldX curDigit
-        ifeq
-            ldA #00000000b
-        else
-            ldA digit1-2, X
-            and #11110000b
-            lsr A
-            lsr A
-            lsr A
-            lsr A
-        endif
-        stA U5b
-
-        ; latch it
-        ldA #00110000b
-        stA U5a
-       
-        ; latch digit to display
-        ldA U5b
-        orA #00010000b
-        stA U5b
-        and #11101111b
-        stA U5b
-
-        
-
-        ; now repeat for lower display
-        ; load lower nibble
-        ldX curDigit
-        ifeq
-            ldA #00000001b
-        else
-            ldA digit21-2, X
-            and #00001111b
-        endif
-        stA U5b
-
-        ; latch it
-        ;ldA U5a
-        ;orA #00010000b
-        ;stA U5a
-        ;and #11101111b
-        ;stA U5a     
-        ldA #00000000b
-        stA U5a
-
-        ; load high nibble
-        ldX curDigit
-        ifeq
-            ldA #00000000b
-        else
-            ldA digit21-2, X
-            and #11110000b
-            lsr A
-            lsr A
-            lsr A
-            lsr A
-        endif
-        stA U5b
-
-        ; latch it
-        ldA #00110000b
-        stA U5a
-       
-        ; latch digit to display
-        ldA U5b
-        orA #00100000b
-        stA U5b
-
-        inX
-        cpX #22
-        ifeq
-            ldX #0
-        endif
-        stX curDigit   
-    endif
 
     ; update lamps
     ldA #10000000b

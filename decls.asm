@@ -14,10 +14,13 @@ lampTemp:       .equ $001E
 ;p4a:            .equ $0033
 ;p4f:            .equ $0038
 ;curDigit:       .equ $0039 ;  0-15
-digit1:         .equ $0020
-digit21:        .equ digit1+20
-digit40:        .equ $0048
-curDigit:       .equ $0049 ; 0 - 21 -> ignore, ignore, digit1 - digit 20
+digitBit:       .equ $001F
+digitA:         .equ $0020
+digitB:         .equ $0021
+digit1:         .equ $0022
+digit21:        .equ digit1+22
+digit40:        .equ $004C
+curDigit:       .equ $004D ; 0 - 21 -> ignore, ignore, digit1 - digit 20
 curSwitch:      .equ $004E ; 0 - 7
 switchTemp:     .equ $004D
 switchY:        .equ $004C
