@@ -3,6 +3,7 @@ l_refresh:
     ; load lower nibble
     ldA 0, X
     and #00001111b
+    orA #00110000b
     stA U5b
 
     ; latch it
@@ -19,6 +20,7 @@ l_refresh:
     lsr A
     lsr A
     lsr A
+    orA #00110000b
     stA U5b
 
     ; latch it

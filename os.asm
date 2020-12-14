@@ -76,7 +76,7 @@ l_clear:
 
     ldA #11111111b
     stA segmentDir
-    ldA #01110000b    ; reset on, LD off
+    ldA #01111111b    ; reset on, LD off
     stA U5b
 
 ; init parallel mode
@@ -101,7 +101,7 @@ l_clear:
     ;stA U5a  
     ; lower reset
     ldA U5b
-    and #10111111b
+    and #10110000b
     stA U5b
 
     ; bring D4-7 high
@@ -140,17 +140,22 @@ l_clear:
     stA digit1+2
     ldA #$06 ; digit time 32
     stA digit1+3
-
+    
     ldA #$01
     stA digit1+4
-    ldA #$0E ; start display
+    ldA #$5C ; digit time 32
     stA digit1+5
+
+    ldA #$01
+    stA digit1+6
+    ldA #$0E ; start display
+    stA digit1+7
 
 ; init  displays
     ldA #00010000b
     stA digitBit
     ldX #digit1-2
-    ldA #8
+    ldA #10
     stA curDigit
     jsr refreshDisplay
     
@@ -208,9 +213,6 @@ seed:
     stA U6_timer
 
     clI
-
-    ldA #255
-    stA U6_timer
 
     ;ldA #255
     ;stA U5_timer
