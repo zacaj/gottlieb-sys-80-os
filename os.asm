@@ -152,7 +152,7 @@ l_clear:
     stA digit1+7
 
 ; init  displays
-    ldA #00010000b
+    ldA #00110000b
     stA digitBit
     ldX #digit1-2
     ldA #10
@@ -165,14 +165,159 @@ l_clear:
     ;ldA #$07
     ;stA p1a+1
     ;stA p3a+2
-    ldX #digit1
-    ldA #$30
-seed:
-    stA 0, X
-    adc #1
-    inX
-    cpX #digit40
-    bne seed
+;    ldX #digit1
+;    ldA #$30
+;seed:
+;    stA 0, X
+;    adc #1
+;    inX
+;    cpX #digit40
+;    bne seed
+; slam tilt
+;    ldA #32
+;    stA digit1+0
+;    ldA #68
+;    stA digit1+1
+;    ldA #73
+;    stA digit1+2
+;    ldA #65
+;    stA digit1+3
+;    ldA #77
+;    stA digit1+4
+;    ldA #79
+;    stA digit1+5
+;    ldA #78
+;    stA digit1+6
+;    ldA #68
+;    stA digit1+7
+;    ldA #32
+;    stA digit1+8
+;    ldA #76
+;    stA digit1+9
+;    ldA #65
+;    stA digit1+10
+;    ldA #68
+;    stA digit1+11
+;    ldA #89
+;    stA digit1+12
+;    ldA #32
+;    stA digit1+13
+;    ldA #83
+;    stA digit1+14
+;    ldA #65
+;    stA digit1+15
+;    ldA #89
+;    stA digit1+16
+;    ldA #83
+;    stA digit1+17
+;
+;    ldA #32
+;    stA digit21+0
+;    ldA #32
+;    stA digit21+1
+;    ldA #72
+;    stA digit21+2
+;    ldA #69
+;    stA digit21+3
+;    ldA #76
+;    stA digit21+4
+;    ldA #76
+;    stA digit21+5
+;    ldA #79
+;    stA digit21+6
+;    ldA #32
+;    stA digit21+7
+;    ldA #83
+;    stA digit21+8
+;    ldA #76
+;    stA digit21+9
+;    ldA #65
+;    stA digit21+10
+;    ldA #77
+;    stA digit21+11
+;    ldA #32
+;    stA digit21+12
+;    ldA #84
+;    stA digit21+13
+;    ldA #73
+;    stA digit21+14
+;    ldA #76
+;    stA digit21+15
+;    ldA #84
+;    stA digit21+16
+;    ldA #32
+;    stA digit21+17
+
+
+
+; jarret+bryan
+;    ldA #32
+;    stA digit1+0
+;    ldA #32
+;    stA digit1+1
+;    ldA #32
+;    stA digit1+2
+;    ldA #72
+;    stA digit1+3
+;    ldA #69
+;    stA digit1+4
+;    ldA #76
+;    stA digit1+5
+;    ldA #76
+;    stA digit1+6
+;    ldA #79
+;    stA digit1+7
+;    ldA #32
+;    stA digit1+8
+;    ldA #74
+;    stA digit1+9
+;    ldA #65
+;    stA digit1+10
+;    ldA #82
+;    stA digit1+11
+;    ldA #82
+;    stA digit1+12
+;    ldA #69
+;    stA digit1+13
+;    ldA #84
+;    stA digit1+14;
+
+;    ldA #32
+;    stA digit21+0
+;    ldA #32
+;    stA digit21+1
+;    ldA #32
+;    stA digit21+2
+;    ldA #72
+;    stA digit21+3
+;    ldA #69
+;    stA digit21+4
+;    ldA #76
+;    stA digit21+5
+;    ldA #76
+;    stA digit21+6
+;    ldA #79
+;    stA digit21+7
+;    ldA #32
+;    stA digit21+8
+;    ldA #66
+;    stA digit21+9
+;    ldA #82
+;    stA digit21+10
+;    ldA #89
+;    stA digit21+11
+;    ldA #65
+;    stA digit21+12
+;    ldA #78
+;    stA digit21+13
+;    ldA #32
+;    stA digit21+14
+;    ldA #32
+;    stA digit21+15
+;    ldA #32
+;    stA digit21+16
+;    ldA #32
+;    stA digit21+17
 
 ; set initial display commands
     ldA #$01
