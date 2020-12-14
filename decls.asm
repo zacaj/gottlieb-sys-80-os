@@ -13,14 +13,14 @@ lampTemp:       .equ $001E
 ;p3f:            .equ $0032
 ;p4a:            .equ $0033
 ;p4f:            .equ $0038
-;curDigit:       .equ $0039 ;  0-15
-digitBit:       .equ $001F
+;digitsToRefresh:       .equ $0039 ;  0-15
+refresh_dispBit:       .equ $001F
 digitA:         .equ $0020
 digitB:         .equ $0021
 digit1:         .equ $0022
 digit21:        .equ digit1+22
 digit40:        .equ $004C
-curDigit:       .equ $004D ; 0 - 21 -> ignore, ignore, digit1 - digit 20
+digitsToRefresh:       .equ $004D ; 0 - 21 -> ignore, ignore, digit1 - digit 20
 curSwitch:      .equ $004E ; 0 - 7
 switchTemp:     .equ $004D
 switchY:        .equ $004C

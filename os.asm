@@ -76,250 +76,27 @@ l_clear:
 
     ldA #11111111b
     stA segmentDir
-    ldA #01111111b    ; reset on, LD off
+    ldA #00000000b
     stA U5b
 
-; init parallel mode
-    ; bring D4-7 high
-    orA #00001111b
-    ;stA U5b
-    ; latch it
-    ldA U5a
-    orA #00100000b
-    ;stA U5a
-    and #11011111b
-    ;stA U5a  
-    ; lower  D4-7
-    ldA U5b
-    and #11110000b
-    ;stA U5b
-    ; latch it
-    ldA U5a
-    orA #00100000b
-    ;stA U5a
-    and #11011111b
-    ;stA U5a  
-    ; lower reset
-    ldA U5b
-    and #10110000b
-    stA U5b
-
-    ; bring D4-7 high
-    ldA U5b
-    orA #00001111b
-    stA U5b
-    ; latch it
-    ldA U5a
-    orA #00110000b
-    stA U5a
-    and #11001111b
-    stA U5a  
-    ; lower  D4-7
-    ldA U5b
-    and #11110000b
-    stA U5b
-    ; latch it
-    ldA U5a
-    orA #00110000b
-    stA U5a
-    and #11001111b
-    stA U5a  
-
-; init display chips    
-    ldA #$01
-    stA digit1-2
-    ldA #$08 ; normal display mode
-    stA digit1-1
-    
-    ldA #$01
-    stA digit1-0
-    ldA #$94 ; 20 digits
-    stA digit1+1
-    
-    ldA #$01
-    stA digit1+2
-    ldA #$06 ; digit time 32
-    stA digit1+3
-    
-    ldA #$01
-    stA digit1+4
-    ldA #$5C ; digit time 32
-    stA digit1+5
-
-    ldA #$01
-    stA digit1+6
-    ldA #$0E ; start display
-    stA digit1+7
-
-; init  displays
-    ldA #00110000b
-    stA digitBit
-    ldX #digit1-2
-    ldA #10
-    stA curDigit
-    jsr refreshDisplay
-    
 
 
 ; seed some display data
     ;ldA #$07
     ;stA p1a+1
     ;stA p3a+2
-;    ldX #digit1
-;    ldA #$30
-;seed:
-;    stA 0, X
-;    adc #1
-;    inX
-;    cpX #digit40
-;    bne seed
-; slam tilt
-;    ldA #32
-;    stA digit1+0
-;    ldA #68
-;    stA digit1+1
-;    ldA #73
-;    stA digit1+2
-;    ldA #65
-;    stA digit1+3
-;    ldA #77
-;    stA digit1+4
-;    ldA #79
-;    stA digit1+5
-;    ldA #78
-;    stA digit1+6
-;    ldA #68
-;    stA digit1+7
-;    ldA #32
-;    stA digit1+8
-;    ldA #76
-;    stA digit1+9
-;    ldA #65
-;    stA digit1+10
-;    ldA #68
-;    stA digit1+11
-;    ldA #89
-;    stA digit1+12
-;    ldA #32
-;    stA digit1+13
-;    ldA #83
-;    stA digit1+14
-;    ldA #65
-;    stA digit1+15
-;    ldA #89
-;    stA digit1+16
-;    ldA #83
-;    stA digit1+17
-;
-;    ldA #32
-;    stA digit21+0
-;    ldA #32
-;    stA digit21+1
-;    ldA #72
-;    stA digit21+2
-;    ldA #69
-;    stA digit21+3
-;    ldA #76
-;    stA digit21+4
-;    ldA #76
-;    stA digit21+5
-;    ldA #79
-;    stA digit21+6
-;    ldA #32
-;    stA digit21+7
-;    ldA #83
-;    stA digit21+8
-;    ldA #76
-;    stA digit21+9
-;    ldA #65
-;    stA digit21+10
-;    ldA #77
-;    stA digit21+11
-;    ldA #32
-;    stA digit21+12
-;    ldA #84
-;    stA digit21+13
-;    ldA #73
-;    stA digit21+14
-;    ldA #76
-;    stA digit21+15
-;    ldA #84
-;    stA digit21+16
-;    ldA #32
-;    stA digit21+17
 
+    jsr initSys80B  
 
+    ldX #digit1
+    ldA #$30
+seed:
+    stA 0, X
+    adc #1
+    inX
+    cpX #digit40
+    bne seed
 
-; jarret+bryan
-;    ldA #32
-;    stA digit1+0
-;    ldA #32
-;    stA digit1+1
-;    ldA #32
-;    stA digit1+2
-;    ldA #72
-;    stA digit1+3
-;    ldA #69
-;    stA digit1+4
-;    ldA #76
-;    stA digit1+5
-;    ldA #76
-;    stA digit1+6
-;    ldA #79
-;    stA digit1+7
-;    ldA #32
-;    stA digit1+8
-;    ldA #74
-;    stA digit1+9
-;    ldA #65
-;    stA digit1+10
-;    ldA #82
-;    stA digit1+11
-;    ldA #82
-;    stA digit1+12
-;    ldA #69
-;    stA digit1+13
-;    ldA #84
-;    stA digit1+14;
-
-;    ldA #32
-;    stA digit21+0
-;    ldA #32
-;    stA digit21+1
-;    ldA #32
-;    stA digit21+2
-;    ldA #72
-;    stA digit21+3
-;    ldA #69
-;    stA digit21+4
-;    ldA #76
-;    stA digit21+5
-;    ldA #76
-;    stA digit21+6
-;    ldA #79
-;    stA digit21+7
-;    ldA #32
-;    stA digit21+8
-;    ldA #66
-;    stA digit21+9
-;    ldA #82
-;    stA digit21+10
-;    ldA #89
-;    stA digit21+11
-;    ldA #65
-;    stA digit21+12
-;    ldA #78
-;    stA digit21+13
-;    ldA #32
-;    stA digit21+14
-;    ldA #32
-;    stA digit21+15
-;    ldA #32
-;    stA digit21+16
-;    ldA #32
-;    stA digit21+17
-
-; set initial display commands
     ldA #$01
     stA digit1-2
     stA digit21-2
@@ -330,13 +107,13 @@ l_clear:
     jsr refreshDisplays
 
 ; a RIOT
-;    ldA #00000000b
-;    stA U4a_dir
-;
-;    ldA #11111111b
-;    stA U4b_dir
-;    ldA #00000001b
-;    stA strobes
+    ldA #00000000b
+    stA U4a_dir
+
+    ldA #11111111b
+    stA U4b_dir
+    ldA #00000001b
+    stA strobes
 
 ; todo
 
@@ -354,43 +131,51 @@ l_clear:
     ldA #00001111b
     stA lampData
 
-    ldA #255
+
+    ;ldX #testText-textStart
+    ;ldY #digit1+4
+    ;jsr writeText
+    ;jsr refreshDisplays
+
+
+    ldA #100
     stA U6_timer
+
+    ldA #50
+    stA U4_timer
 
     clI
 
     ;ldA #255
     ;stA U5_timer
 
-    ;ldA #255
-    ;stA U4_timer
 
 loop:
-;    ldX curQueueStart
-;    cpX curQueueEnd
-;    ifne
-;        ldA queueHigh-queueLow, X
-;        ifne ; active address
-;            ldA queueLeft-queueLow, X
-;            ifeq ; timer expired
-;                ldA queueHigh-queueLow, X 
-;                stA queueTemp+0
-;                ldA 0, X
-;                stA queueTemp+1
-;                ldA #0
-;                stA queueHigh-queueLow, X
-;                jmp (queueTemp)
-;            endif
-;        endif
+    ldX curQueueStart
+    cpX curQueueEnd
+    ifne
+        ldA queueHigh-queueLow, X
+        ifne ; active address
+            ldA queueLeft-queueLow, X
+            ifeq ; timer expired
+                ldA queueHigh-queueLow, X 
+                stA queueTemp+0
+                ldA 0, X
+                stA queueTemp+1
+                ldA #0
+                stA queueHigh-queueLow, X
+                jmp (queueTemp)
+            endif
+        endif
 afterQueueRun:
-;        ldX curQueueStart
-;        inX 
-;        cpX #queueLowEnd
-;        ifeq
-;            ldX #queueLow
-;        endif
-;        stX curQueueStart
-;    endif
+        ldX curQueueStart
+        inX 
+        cpX #queueLowEnd
+        ifeq
+            ldX #queueLow
+        endif
+        stX curQueueStart
+    endif
 
     jmp loop
 
@@ -401,88 +186,109 @@ irq:
     tYA
     phA
 
-;    ; update matrix
-;    ldA #10000000b
-;    bit U4_irq
-;    ifne
-;        ldA #10
-;        stA U4_timer
-;
-;        ldX curSwitch
-;
-;        ldA returns
-;        eor sswitch1, X ; 1 = switch not settled
-;        eor #11111111b ; 1 = switch is settled
-;        stA switchTemp 
-;
-;        ldA returns
-;        eor switch1, X ; 1 = switch != new
-;        and switchTemp ; 1 = switch != new AND is settled
-;        stA switchTemp
-;
-;        ifne ; at least one switch in column changed
-;            ldA curSwitch+0
-;            asl A
-;            asl A
-;            asl A
-;            asl A
-;            tAY
-;            ldA #00000001b
-;l_switch:
-;            bit switchTemp
-;            ifne ; switch changed
-;                phA
-;                and switch1, X
-;                ifeq ; was off, now on
-;                    stY switchY
-;                    ldA switchCallbacks+0, Y
-;                    ldY curQueueEnd
-;                    stA queueHigh-queueLow, Y
-;                    ldY switchY
-;                    ldA switchCallbacks+1, Y
-;                    ldY curQueueEnd
-;                    stA 0, Y
-;                    ldA #0
-;                    stA queueLeft-queueLow, Y
-;                    inY
-;                    cpY #queueLowEnd
-;                    ifeq
-;                        ldY #queueLow
-;                    endif
-;                    stY curQueueEnd
-;                    ldY switchY
-;                endif
-;
-;                plA
-;                phA
-;                eor switch1, X
-;                stA switch1, X
-;
-;                plA
-;            endif
-;            inY
-;            inY
-;            asl A
-;            bne l_switch
-;        endif
-;
-;        ldA returns
-;        stA sswitch1, X
-;
-;
-;        ldA strobes
-;        asl A
-;        ifeq
-;            ldA #00000001b
-;        endif
-;        stA strobes
-;        inX
-;        cpX #8
-;        ifeq
-;            ldX #0
-;        endif
-;        stX curSwitch  
-;    endif 
+    ; update matrix
+    ldA #10000000b
+    bit U4_irq
+    ifeq
+        jmp afterSwitch
+    endif
+        ldA #10
+        stA U4_timer
+
+        ldX curSwitch
+
+        ldA returns
+        eor sswitch1, X ; 1 = switch not settled
+        eor #11111111b ; 1 = switch is settled
+        stA switchTemp 
+
+        ldA returns
+        eor switch1, X ; 1 = switch != new
+        and switchTemp ; 1 = switch != new AND is settled
+        stA switchTemp
+
+        ifne ; at least one switch in column changed
+            ldA curSwitch+0
+            asl A
+            asl A
+            asl A
+            asl A
+            tAY
+            ldA #00000001b
+l_switch:
+            bit switchTemp
+            ifne ; switch changed
+                phA
+                and switch1, X
+                ifeq ; was off, now on
+                    stY switchY
+                    ldA switchCallbacks+0, Y
+                    ldY curQueueEnd
+                    stA queueHigh-queueLow, Y
+                    ldY switchY
+                    ldA switchCallbacks+1, Y
+                    ldY curQueueEnd
+                    stA 0, Y
+                    ldA #0
+                    stA queueLeft-queueLow, Y
+                    inY
+                    cpY #queueLowEnd
+                    ifeq
+                        ldY #queueLow
+                    endif
+                    stY curQueueEnd
+
+                    ; show switch on screen
+                    tXA
+                    phA
+                    ldX #t_switch-textStart
+                    ldY #digit1+3
+                    jsr writeText
+                    ldA switchY
+                    and #00001111b
+                    lsr A
+                    adc #$30
+                    stA digit1+3+8
+                    ldA curSwitch
+                    adc #$30
+                    stA digit1+3+9
+                    jsr refreshDisplays
+                    plA
+                    tAX
+
+                    ldY switchY
+                endif
+
+                plA
+                phA
+                eor switch1, X
+                stA switch1, X
+
+                plA
+            endif
+            inY
+            inY
+            asl A
+            bne l_switch
+        endif
+
+        ldA returns
+        stA sswitch1, X
+
+
+        ldA strobes
+        asl A
+        ifeq
+            ldA #00000001b
+        endif
+        stA strobes
+        inX
+        cpX #8
+        ifeq
+            ldX #0
+        endif
+        stX curSwitch  
+afterSwitch: 
 
     ; update lamps
     ldA #10000000b
