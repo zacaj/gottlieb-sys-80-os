@@ -6,6 +6,7 @@
 
 .org U2
 #include "disp80B.asm"
+#include "util.asm"
 
 start:	
     clD  	
@@ -21,7 +22,7 @@ l_clear:
     tXS
 
 ; lets start a riot
-    ldA #11110000b
+    ldA #11100000b
     stA solData
     ldA #11111111b
     stA solDir
@@ -45,6 +46,9 @@ l_clear:
     ;stA lampData
     ;ldA #00000001b
     ;stA lampData
+
+    ldA #10000000b
+    stA lamp1+0
 
     ldA #10100000b
     ;stA lamp1+1
@@ -141,13 +145,14 @@ seed:
     ldA #100
     stA U6_timer
 
+    ;ldA #255
+    ;stA U5_timer
+
     ldA #50
     stA U4_timer
 
     clI
 
-    ;ldA #255
-    ;stA U5_timer
 
 
 loop:
@@ -159,9 +164,9 @@ loop:
             ldA queueLeft-queueLow, X
             ifeq ; timer expired
                 ldA queueHigh-queueLow, X 
-                stA queueTemp+0
-                ldA 0, X
                 stA queueTemp+1
+                ldA 0, X
+                stA queueTemp+0
                 ldA #0
                 stA queueHigh-queueLow, X
                 jmp (queueTemp)
@@ -185,6 +190,18 @@ irq:
     phA
     tYA
     phA
+
+#if 0
+    ; update solenoids
+    ldA #10000000b
+    bit U5_irq
+    ifne
+        ; disable timer
+        ldA U5+$04
+
+        jsr turnOffCurSolenoid
+    endif
+#endif
 
     ; update matrix
     ldA #10000000b
@@ -222,11 +239,11 @@ l_switch:
                 and switch1, X
                 ifeq ; was off, now on
                     stY switchY
-                    ldA switchCallbacks+0, Y
+                    ldA switchCallbacks+1, Y
                     ldY curQueueEnd
                     stA queueHigh-queueLow, Y
                     ldY switchY
-                    ldA switchCallbacks+1, Y
+                    ldA switchCallbacks+0, Y
                     ldY curQueueEnd
                     stA 0, Y
                     ldA #0

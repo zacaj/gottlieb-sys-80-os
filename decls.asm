@@ -35,6 +35,7 @@ queueLeft:      .equ $0068 ;
 curQueueStart:  .equ $007E
 curQueueEnd:    .equ $007F
 queueTemp:      .equ $007C ; +
+curSol:            .equ $0080
 
 
 U4:             .equ $0200  ; 0200-021F	U4 registers, switch matrixU5a:            .equ U5+$00
@@ -51,8 +52,9 @@ U5a:            .equ U5+$00
 U5a_dir:        .equ U5+$01
 U5b:            .equ U5+$02
 U5b_dir:        .equ U5+$03
-U5_timer:       .equ U5+$1E
+U5_timer:       .equ U5+$1F
 U5_irq:         .equ U5+$05
+U5_disable:     .equ U5+$14
 digitData:      .equ U5a ; 0-3: select digit 0-15.  4-6: strobe segment group A-C.  7: ignore
 digitDir:       .equ U5a_dir
 segmentData:    .equ U5b ; 0-3: BCD segments. 4-6: 1s segment for segment group A-C. 7: sw enable (keep low)
