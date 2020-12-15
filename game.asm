@@ -35,49 +35,57 @@ queen:
     stA lamp1
     jmp afterQueueRun
 
-ace: ; ud
+ace: ; yd
     ldA lEnableFlippers
     jsr turnOnSolenoid
     jmp afterQueueRun
-joker: ; uf
+joker: ; yf
     ldA lEnableFlippers
     jsr fireSolenoid
     jmp afterQueueRun
-leftLane: ; ug
+leftLane: ; yg
     ldA fLeftRamp
     jsr fireSolenoid
     jmp afterQueueRun
-rightLane: ; uh
+rightLane: ; yh
     ldA fTopDome
     jsr fireSolenoid
     jmp afterQueueRun
-skillshot: ; uj
+skillshot: ; yj
     ldA lBallRelease
     jsr fireSolenoid
     jmp afterQueueRun
-ten: ; yd
+ten: ; td
     ldA cTopDrop
     jsr fireSolenoid
     jmp afterQueueRun
-jack: ; yf
+jack: ; tf
     ldA cRightDrop
     jsr fireSolenoid
     jmp afterQueueRun
-ramp: ; yg
+ramp: ; tg
     ldA fBottomDome
     jsr fireSolenoid
     jmp afterQueueRun
-leftSpinner: ; yh
+leftSpinner: ; th
     ldA cKnocker
     jsr fireSolenoid
     jmp afterQueueRun
-rightSpinner: ; yj
+rightSpinner: ; tj
     ldA cOuthole
     jsr fireSolenoid
     jmp afterQueueRun
-lock: ; yk
+lock: ; tk
     ldA lBottomTrip
     jsr fireSolenoid
+    jmp afterQueueRun
+
+leftSideLane: ; ak
+    ldA #7
+    ldX #digit21+5
+    ldY #5
+    jsr addScore
+    jsr refreshDisplays
     jmp afterQueueRun
     
 
@@ -88,11 +96,11 @@ t_switch: .text " SWITCH XX \000"
 
 .org U3
 switchCallbacks:
-    .dw nothing \.dw nothing \.dw nothing \.dw nothing \.dw nothing \.dw nothing \.dw nothing \.dw nothing
-    .dw nothing \.dw nothing \.dw nothing \.dw nothing \.dw nothing \.dw nothing \.dw nothing \.dw nothing
-    .dw nothing \.dw nothing \.dw right1  \.dw nothing \.dw nothing \.dw ten \.dw ace \.dw nothing
-    .dw nothing \.dw nothing \.dw nothing \.dw nothing \.dw nothing \.dw jack   \.dw joker \.dw queen
-    .dw nothing \.dw nothing \.dw nothing \.dw nothing \.dw nothing \.dw ramp \.dw leftLane \.dw nothing
-    .dw nothing \.dw nothing \.dw nothing \.dw nothing \.dw nothing \.dw leftSpinner \.dw rightLane \.dw nothing
-    .dw nothing \.dw nothing \.dw nothing \.dw nothing \.dw nothing \.dw rightSpinner \.dw skillshot \.dw nothing
-    .dw nothing \.dw nothing \.dw nothing \.dw nothing \.dw nothing \.dw lock \.dw nothing \.dw nothing
+    .dw nothing \.dw nothing \.dw nothing \.dw nothing \.dw nothing \.dw nothing \.dw nothing \.dw nothing 
+    .dw nothing \.dw nothing \.dw nothing \.dw nothing \.dw nothing \.dw nothing \.dw nothing \.dw nothing 
+    .dw nothing \.dw nothing \.dw right1  \.dw nothing \.dw ten \.dw ace \.dw nothing \.dw nothing 
+    .dw nothing \.dw nothing \.dw nothing \.dw nothing \.dw jack   \.dw joker \.dw queen \.dw nothing 
+    .dw nothing \.dw nothing \.dw nothing \.dw nothing \.dw ramp \.dw leftLane \.dw nothing \.dw nothing 
+    .dw nothing \.dw nothing \.dw nothing \.dw nothing \.dw leftSpinner \.dw rightLane \.dw nothing \.dw nothing 
+    .dw nothing \.dw nothing \.dw nothing \.dw nothing \.dw rightSpinner \.dw skillshot \.dw nothing \.dw nothing 
+    .dw leftSideLane \.dw nothing \.dw nothing \.dw nothing \.dw lock \.dw nothing \.dw nothing \.dw nothing 

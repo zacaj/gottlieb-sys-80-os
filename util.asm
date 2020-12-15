@@ -24,7 +24,7 @@ turnOffCurSolenoid:
         and #00001111b
         stA lampData
 
-        ; use curSol as temp storage since it's not needed
+        ; use curSol as temp storage since it's not needed anymore
         ldA curSol
         and #11110000b
         stA curSol
@@ -137,4 +137,41 @@ turnOnSolenoid:
     tAX
     plA
     
+    rts
+
+; A: amount to add (1-9)
+; X: address in digit1-40 to add to
+; Y: max number of digits to affect
+addScore:
+    ; check if blank
+    phA
+    ldA 0, X
+    cmp #$20 ; ' 
+    ifeq
+        ldA #$30
+        stA 0, X
+    endif
+    plA
+
+    ; do the add
+    clC
+    adc 0, X
+    cmp #$39+1 ; '9' + 1
+    ifAge
+        ; overflowed
+        seC
+        sbc #10
+        stA 0, X
+        deX
+        deY
+        beq e_addScore
+
+        ; carry to next digit
+        ldA #1
+        jmp addScore
+    else
+        stA 0, X
+    endif
+
+e_addScore:
     rts

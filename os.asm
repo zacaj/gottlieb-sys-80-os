@@ -126,6 +126,15 @@ seed:
     stX curQueueEnd
 
 
+    ldA #$20
+    stA digit21+2
+    stA digit21+3
+    stA digit21+4
+    ldA #$30
+    stA digit21+5
+    stA digit21+6
+    jsr refreshDisplays
+
 
     ; test
     ldA #00001111b
@@ -191,7 +200,7 @@ irq:
     tYA
     phA
 
-#if 0
+#if 1
     ; update solenoids
     ldA #10000000b
     bit U5_irq
@@ -265,10 +274,10 @@ l_switch:
                     and #00001111b
                     lsr A
                     adc #$30
-                    stA digit1+3+8
+                    stA digit1+3+9
                     ldA curSwitch
                     adc #$30
-                    stA digit1+3+9
+                    stA digit1+3+8
                     jsr refreshDisplays
                     plA
                     tAX
