@@ -2,8 +2,6 @@
 
 #include "decls.asm"
 
-#include "game.asm"
-
 .org U2
 #include "disp80B.asm"
 #include "util.asm"
@@ -48,7 +46,9 @@ l_clear:
     ;stA lampData
 
     ldA #10000000b
-    stA lamp1+0
+    ;stA lamp1+0
+    ldA #10000000b
+    stA lamp1+4
 
     ldA #10100000b
     ;stA lamp1+1
@@ -145,10 +145,15 @@ seed:
     stA lampData
 
 
-    ;ldX #testText-textStart
-    ;ldY #digit1+4
+    ;ldX #youreWelcome-textStart
+    ;ldY #digit1+0
+    ;jsr writeText
+    ;ldX #chuckwurt-textStart
+    ;ldY #digit21+0
     ;jsr writeText
     ;jsr refreshDisplays
+
+    jsr game_init
 
 
     ldA #100
@@ -191,6 +196,8 @@ afterQueueRun:
         stX curQueueStart
     endif
 
+    jsr game_loop
+
     jmp loop
 
 irq: 
@@ -218,7 +225,7 @@ irq:
     ifeq
         jmp afterSwitch
     endif
-        ldA #10
+        ldA #3
         stA U4_timer
 
         ldX curSwitch

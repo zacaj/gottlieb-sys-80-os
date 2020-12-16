@@ -36,6 +36,7 @@ curQueueStart:  .equ $007E
 curQueueEnd:    .equ $007F
 queueTemp:      .equ $007C ; +
 curSol:            .equ $0080
+#define lampSol(n,b,x) #(b<<4)|(x)
 
 
 U4:             .equ $0200  ; 0200-021F	U4 registers, switch matrixU5a:            .equ U5+$00

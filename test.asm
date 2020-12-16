@@ -7,7 +7,6 @@
 #define fBottomDome #7
 #define cKnocker #8
 #define cOuthole #9
-#define lampSol(n,b,x) #(b<<4)|(x)
 #define lBottomTrip lampSol(18,5,0100b)
 #define lBallRelease lampSol(2,1,0100b)
 #define lLock lampSol(13,4,0010b)
@@ -18,8 +17,15 @@
 #define lEnableFlippers lampSol(0,1,0001b)
 #define lTilt lampSol(1,1,0010b)
 
+#include "os.asm"
+
 
 .org U3 + (64*2)
+
+game_init:
+game_loop:
+    rts
+
 nothing:
     nop
     jmp afterQueueRun
@@ -29,10 +35,8 @@ right1:
     jmp afterQueueRun
 
 queen: 
-    nop
-    ldA lamp1
-    eor #00001111b
-    stA lamp1
+    ldA lTilt
+    jsr turnOnSolenoid
     jmp afterQueueRun
 
 ace: ; yd
@@ -40,7 +44,7 @@ ace: ; yd
     jsr turnOnSolenoid
     jmp afterQueueRun
 joker: ; yf
-    ldA lEnableFlippers
+    ldA lEnableFlippers ; worked
     jsr fireSolenoid
     jmp afterQueueRun
 leftLane: ; yg
@@ -52,31 +56,31 @@ rightLane: ; yh
     jsr fireSolenoid
     jmp afterQueueRun
 skillshot: ; yj
-    ldA lBallRelease
+    ldA lLock
     jsr fireSolenoid
     jmp afterQueueRun
 ten: ; td
-    ldA cTopDrop
+    ldA lBallRelease
     jsr fireSolenoid
     jmp afterQueueRun
 jack: ; tf
-    ldA cRightDrop
+    ldA lKickback
     jsr fireSolenoid
     jmp afterQueueRun
 ramp: ; tg
-    ldA fBottomDome
+    ldA fBottomDome ; worked
     jsr fireSolenoid
     jmp afterQueueRun
 leftSpinner: ; th
-    ldA cKnocker
+    ldA lLeftTrip 
     jsr fireSolenoid
     jmp afterQueueRun
 rightSpinner: ; tj
-    ldA cOuthole
+    ldA lTopTrip 
     jsr fireSolenoid
     jmp afterQueueRun
 lock: ; tk
-    ldA lBottomTrip
+    ldA cBottomDrop
     jsr fireSolenoid
     jmp afterQueueRun
 
