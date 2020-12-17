@@ -183,6 +183,7 @@ loop:
                 stA queueTemp+0
                 ldA #0
                 stA queueHigh-queueLow, X
+                ldA queueA-queueLow, X
                 jmp (queueTemp)
             endif
         endif
@@ -225,7 +226,7 @@ irq:
     ifeq
         jmp afterSwitch
     endif
-        ldA #3
+        ldA #2
         stA U4_timer
 
         ldX curSwitch
@@ -240,14 +241,16 @@ irq:
         and switchTemp ; 1 = switch != new AND is settled
         stA switchTemp
 
-        ifne ; at least one switch in column changed
-            ldA curSwitch+0
+        ifeq
+            jmp afterSwitchChanged
+        endif ; at least one switch in column changed
+            ldA curSwitch
             asl A
             asl A
             asl A
             asl A
             tAY
-            ldA #00000001b
+            ldA #00000001b ; bit in the strobe to check
 l_switch:
             bit switchTemp
             ifne ; switch changed
@@ -255,15 +258,44 @@ l_switch:
                 and switch1, X
                 ifeq ; was off, now on
                     stY switchY
-                    ldA switchCallbacks+1, Y
-                    ldY curQueueEnd
-                    stA queueHigh-queueLow, Y
-                    ldY switchY
-                    ldA switchCallbacks+0, Y
-                    ldY curQueueEnd
-                    stA 0, Y
+
+                    ; check if in game over or not
+                    ldA #00000001b
+                    bit lamp1
+
+                    ifeq 
+                        ; in game over
+                        ldY curQueueEnd
+                        ldA #swGameOver&$FF
+                        stA 0, Y
+                        ldA #swGameOver>>8
+                        stA queueHigh-queueLow, Y
+                    else ; not in game over
+                        ; store address in queue
+                        ldA switchCallbacks+1, Y
+                        ldY curQueueEnd
+                        stA queueHigh-queueLow, Y
+                        ldY switchY
+                        ldA switchCallbacks+0, Y
+                        ldY curQueueEnd
+                        stA 0, Y
+                    endif
+
+                    ; compute switch number
+                    ldA switchY
+                    lsr A
+                    and #00000111b
+                    stA queueA-queueLow, Y
+                    ldA switchY
+                    and #11110000b
+                    orA queueA-queueLow, Y
+                    stA queueA-queueLow, Y
+
+                    ; enable entry
                     ldA #0
                     stA queueLeft-queueLow, Y
+
+                    ; increment queue
                     inY
                     cpY #queueLowEnd
                     ifeq
@@ -271,6 +303,7 @@ l_switch:
                     endif
                     stY curQueueEnd
 
+#if 1
                     ; show switch on screen
                     tXA
                     phA
@@ -288,6 +321,7 @@ l_switch:
                     jsr refreshDisplays
                     plA
                     tAX
+#endif
 
                     ldY switchY
                 endif
@@ -303,7 +337,7 @@ l_switch:
             inY
             asl A
             bne l_switch
-        endif
+afterSwitchChanged:
 
         ldA returns
         stA sswitch1, X

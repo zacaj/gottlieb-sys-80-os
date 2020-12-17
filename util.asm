@@ -60,9 +60,17 @@ turnOffSolenoid:
 ; A: solenoid to turn on
 fireSolenoid:
     phA
-    ldA #70
+    ldA #60
     stA U5_timer
     plA
+    jsr turnOnSolenoid
+    stA curSol
+    rts
+
+; A: solenoid to turn on
+; Y: time to fire it for
+fireSolenoidFor:
+    stY U5_timer
     jsr turnOnSolenoid
     stA curSol
     rts

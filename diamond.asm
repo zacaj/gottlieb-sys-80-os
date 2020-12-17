@@ -26,6 +26,25 @@ game_init:
 game_loop:
     rts
 
+swGameOver:
+    cmp #$47 ; start button  ih
+    ifeq
+        ldA #1<<6
+        bit switch1+4
+        ifne
+            jsr startGame
+        endif
+    endif
+    cmp #$66 ; outhole  uj
+    ifeq
+        jmp outhole
+    endif
+    cmp #$74 ; lock
+    ifeq
+        ldA lLock
+        jsr fireSolenoid
+    endif
+    jmp afterQueueRun
 nothing:
     nop
     jmp afterQueueRun
