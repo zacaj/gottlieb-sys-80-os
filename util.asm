@@ -278,3 +278,28 @@ score10kxA:
     rts
 
 #define done() jmp afterQueueRun
+
+#define wait(t) \ phA
+#defcont        \ ldA #0+t/TIMER_TICK
+#defcont        \ jsr _wait
+
+_wait:
+    ldX curQueueEnd
+    stA queueLeft-queueLow, X
+    plA 
+    stA 0, X
+    plA 
+    stA queueHigh-queueLow, X
+    plA 
+    stA queueA-queueLow, X
+
+    ; increment queue
+    cpX #queueLowEnd
+    ifeq
+        ldX #queueLow
+    else
+        inX
+    endif
+    stX curQueueEnd
+
+    jmp afterQueueRun

@@ -169,7 +169,9 @@ leftSideLane: ; ak
     jmp afterQueueRun
 
 tenPoints: ; rf
-    score10x(3)
+    score10x(1)
+    wait(500)
+    score10x(2)
     done()
     
 

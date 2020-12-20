@@ -174,7 +174,19 @@ loop:
     bit flags
     ifne ; timer tick
         jsr game_timerTick
+    
+        ; decrement queue timers
+        ldX #queueLow
+l_tickQueue:
+        ldA queueLeft-queueLow, X
+        ifne
+            dec queueLeft-queueLow, X
+        endif
+        inX
+        cpX #queueLowEnd+1
+        bne l_tickQueue
 
+        ; check in game timers
         ldA #00000001
         bit lamp1+0
         ifne ; in game
