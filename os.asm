@@ -229,12 +229,12 @@ afterQueueRun:
                 ldA #0001b
                 bit lamp1+0
                 ifne ; in game
-                    jsr syncDigits
+                    jsr syncCurPlayer
                     jsr game_afterQueue
-                    jsr refreshDisplays
                     ldA #2000/TIMER_TICK
                     stA scoreBlinkTimer
                 endif
+                jsr refreshDisplays
             endif
         endif
     endif
@@ -350,8 +350,8 @@ l_switch:
                     ; show switch on screen
                     tXA
                     phA
-                    ldX #t_switch-textStart
-                    ldY #digit21+3
+                    ldY #t_switch-textStart
+                    ldX #digit21+3
                     jsr writeText
                     ldA switchY
                     and #00001111b

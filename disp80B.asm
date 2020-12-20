@@ -151,9 +151,9 @@ initSys80B:
 writeText:
     phA
 l_text:
-    ldA textStart, X
+    ldA textStart, Y
     beq e_text
-    stA 0, Y
+    stA 0, X
     inX
     inY
     bne l_text
@@ -180,6 +180,16 @@ setAtoCurPlayerFirstDigit:
         endif
     endif
 
+    rts
+
+setAtoOtherDisplay:
+    ldA #00000010b
+    bit curPlayer
+    ifeq ; player 1 or 2, top display
+        ldA #digit21
+    else
+        ldA #digit1
+    endif
     rts
 
 
@@ -212,6 +222,20 @@ syncDigits:
     jsr copy
 
     rts
+
+syncCurPlayer:
+    jsr setAtoCurPlayerFirstDigit
+    tAX
+
+    ldA curPlayer
+    asl A
+    asl A
+    asl A
+    adc #p1a
+    tAY
+
+    ldA #8
+    jmp copy
 
 handleBlinkScore:
     dec scoreBlinkTimer

@@ -81,6 +81,8 @@ startBall:
     ldA lEnableFlippers
     jsr turnOnSolenoid
 
+    jsr syncDigits
+
     rts
 
 startButton:
@@ -96,7 +98,7 @@ startButton:
         ldA #$30 ; '0'
         stA p2h-0
         stA p2h-1
-        done()
+        jmp playerAdded
     endif
 
     ldA #$20 ; ' '
@@ -105,7 +107,7 @@ startButton:
         ldA #$30 ; '0'
         stA p3h-0
         stA p3h-1
-        done()
+        jmp playerAdded
     endif
 
     ldA #$20 ; ' '
@@ -114,9 +116,10 @@ startButton:
         ldA #$30 ; '0'
         stA p4h-0
         stA p4h-1
-        done()
+        jmp playerAdded
     endif
-
+playerAdded:
+    jsr syncDigits
     done()
 
 nothing:
@@ -127,6 +130,48 @@ outhole:
     ldA cOuthole
     jsr fireSolenoid
     jmp afterQueueRun
+
+trough: ; ug
+    wait(100)
+    ldA #1<<6
+    bit strobe0+4
+    ifne
+        ldY #t_bonus-textStart
+        jsr setAtoOtherDisplay
+        tAX
+        jsr writeText
+        wait(700)
+        
+        ldA curPlayer
+        cmp #3
+        beq nextBall
+
+        inc curPlayer
+        jsr setXToCurPlayer10
+        inX
+        ldA 0, X
+        cmp #$20 ; ' '
+        ifeq
+nextBall:
+            inc curBall
+            ldA #0
+            stA curPlayer
+            ldA curBall
+            cmp #$34 ; '4'
+            ifAge ; game over
+                ldA lEnableFlippers
+                jsr turnOffSolenoid
+                jsr syncDigits
+                done()
+            endif
+        endif
+        
+        jsr startBall
+    endif
+
+    done()
+
+
 
 right1:
     nop
@@ -179,6 +224,7 @@ tenPoints: ; rf
 textStart:
 testText: .text " TEST TEXT \000"
 t_switch: .text " SWITCH XX \000"
+t_bonus:  .text "BONUS: \000"
 
 .org U3
 switchCallbacks:
@@ -186,7 +232,7 @@ switchCallbacks:
     .dw nothing \.dw nothing \.dw nothing \.dw nothing \.dw nothing \.dw nothing \.dw nothing \.dw nothing 
     .dw nothing \.dw nothing \.dw right1  \.dw nothing \.dw ten \.dw ace \.dw nothing \.dw nothing 
     .dw nothing \.dw nothing \.dw nothing \.dw tenPoints \.dw jack   \.dw joker \.dw queen \.dw nothing 
-    .dw nothing \.dw nothing \.dw nothing \.dw nothing \.dw ramp \.dw leftLane \.dw nothing \.dw startButton 
+    .dw nothing \.dw nothing \.dw nothing \.dw nothing \.dw ramp \.dw leftLane \.dw trough \.dw startButton 
     .dw nothing \.dw nothing \.dw nothing \.dw nothing \.dw leftSpinner \.dw rightLane \.dw nothing \.dw nothing 
     .dw nothing \.dw nothing \.dw nothing \.dw nothing \.dw rightSpinner \.dw skillshot \.dw outhole \.dw nothing 
     .dw leftSideLane \.dw nothing \.dw nothing \.dw nothing \.dw lock \.dw nothing \.dw nothing \.dw nothing 

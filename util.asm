@@ -52,10 +52,14 @@ turnOffSolenoid:
     phA
     tXA
     phA
+    tSX
+    ldA $100+2, X
 
     ldX curSol
-    jsr turnOffCurSolenoid
     stA curSol
+    jsr turnOffCurSolenoid
+    stX curSol
+    rts
 
 ; A: solenoid to turn on
 fireSolenoid:
