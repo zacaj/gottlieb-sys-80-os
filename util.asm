@@ -184,13 +184,13 @@ addScore:
 e_addScore:
     rts
 
-; X: source
-; Y: dest
+; Y: source
+; X: dest
 ; A: amount
 copy:
     phA
-    ldA 0, X
-    stA 0, Y
+    ldA 0, Y
+    stA 0, X
     inX
     inY
     plA

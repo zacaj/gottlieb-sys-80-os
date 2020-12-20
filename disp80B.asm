@@ -161,6 +161,28 @@ e_text:
     plA
     rts
 
+setAtoCurPlayerFirstDigit:
+    ldA curPlayer
+    cmp #0
+    ifeq
+        ldA #digit1
+    else 
+        cmp #1
+        ifeq 
+            ldA #digit1+12
+        else
+            cmp #2
+            ifeq 
+                ldA #digit21
+            else
+                ldA #digit21+12
+            endif
+        endif
+    endif
+
+    rts
+
+
 syncDigits:
     ldA #$20 ; ' '
     stA digit1+8
@@ -172,21 +194,59 @@ syncDigits:
     ldA curBall
     stA digit1+10
 
-    ldX #p1a
-    ldY #digit1
+    ldY #p1a
+    ldX #digit1
     ldA #8
     jsr copy
-    ldX #p2a
-    ldY #digit1+12
+    ldY #p2a
+    ldX #digit1+12
     ldA #8
     jsr copy
-    ldX #p3a
-    ldY #digit21
+    ldY #p3a
+    ldX #digit21
     ldA #8
     jsr copy
-    ldX #p4a
-    ldY #digit21+12
+    ldY #p4a
+    ldX #digit21+12
     ldA #8
     jsr copy
 
     rts
+
+handleBlinkScore:
+    dec scoreBlinkTimer
+    ifeq
+        jsr setAtoCurPlayerFirstDigit
+        tAX
+        clC
+        adc #7 ; get to 1s digit
+        tAY
+
+
+        ldA 0, Y
+        cmp #$20 ; ' '
+        ifeq ; currently blank
+            ldA curPlayer
+            asl A
+            asl A
+            asl A
+            adc #p1a
+            tAY ; X = start of player score
+            ldA #8
+            jsr copy
+
+            ldA #800/TIMER_TICK
+        else
+            ldA #$20 ; ' '
+            ldY #8
+            jsr set
+
+            ldA #200/TIMER_TICK
+        endif
+
+        stA scoreBlinkTimer
+        jsr refreshDisplays
+    endif
+
+    rts
+

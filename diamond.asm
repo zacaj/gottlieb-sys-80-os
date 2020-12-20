@@ -27,13 +27,14 @@ temph:          .equ gameRAM+$07 ; 1s
 game_init:
 game_loop:
 game_afterQueue:
+game_timerTick:
     rts
 
 swGameOver:
-    cmp #$47 ; start button  ih
+    cmp #$47 ; startButton button  ih
     ifeq
         ldA #1<<6 ; trough switch
-        bit switch1+4
+        bit strobe0+4
         ifne
             jsr startGame
         endif
@@ -81,6 +82,42 @@ startBall:
     jsr turnOnSolenoid
 
     rts
+
+startButton:
+    ldA #$31 ; '1'
+    cmp curBall
+    ifne
+        done()
+    endif
+
+    ldA #$20 ; ' '
+    cmp p2h
+    ifeq
+        ldA #$30 ; '0'
+        stA p2h-0
+        stA p2h-1
+        done()
+    endif
+
+    ldA #$20 ; ' '
+    cmp p3h
+    ifeq
+        ldA #$30 ; '0'
+        stA p3h-0
+        stA p3h-1
+        done()
+    endif
+
+    ldA #$20 ; ' '
+    cmp p4h
+    ifeq
+        ldA #$30 ; '0'
+        stA p4h-0
+        stA p4h-1
+        done()
+    endif
+
+    done()
 
 nothing:
     nop
@@ -147,7 +184,7 @@ switchCallbacks:
     .dw nothing \.dw nothing \.dw nothing \.dw nothing \.dw nothing \.dw nothing \.dw nothing \.dw nothing 
     .dw nothing \.dw nothing \.dw right1  \.dw nothing \.dw ten \.dw ace \.dw nothing \.dw nothing 
     .dw nothing \.dw nothing \.dw nothing \.dw tenPoints \.dw jack   \.dw joker \.dw queen \.dw nothing 
-    .dw nothing \.dw nothing \.dw nothing \.dw nothing \.dw ramp \.dw leftLane \.dw nothing \.dw nothing 
+    .dw nothing \.dw nothing \.dw nothing \.dw nothing \.dw ramp \.dw leftLane \.dw nothing \.dw startButton 
     .dw nothing \.dw nothing \.dw nothing \.dw nothing \.dw leftSpinner \.dw rightLane \.dw nothing \.dw nothing 
     .dw nothing \.dw nothing \.dw nothing \.dw nothing \.dw rightSpinner \.dw skillshot \.dw outhole \.dw nothing 
     .dw leftSideLane \.dw nothing \.dw nothing \.dw nothing \.dw lock \.dw nothing \.dw nothing \.dw nothing 

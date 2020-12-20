@@ -1,16 +1,19 @@
 
 RAM:			.equ $0000  ; thru 017F
 stackBottom:    .equ $017F
-curPlayer:      .equ $0000
+curPlayer:      .equ $0000 ; 0-3
 curBall:        .equ $0001 ; '1'-'3' or 0 in game over
-curQueueStart:  .equ $000E
-curQueueEnd:    .equ $000F
+flags:          .equ $0002 ; UUUUUUU | timer ticked
+timer:          .equ $0003 ; decrements to 0 every 16ms
+scoreBlinkTimer:.equ $0004 ; blinks the player's score off/on
+curQueueStart:  .equ $000E ; queueLow-queueLowEnd
+curQueueEnd:    .equ $000F ; queueLow-queueLowEnd
 queueTemp:      .equ $000C ; +
-lamp1:          .equ $0010
+lamp1:          .equ $0010 ; lower nibble: lamp state.  upper nibble: flash lamps if set
 lamp12:         .equ lamp1 + 11
 curLamp:        .equ $001C ; 1-12
 lampTemp:       .equ $001E
-curSol:         .equ $001F
+curSol:         .equ $001F ; currently firing solenoid or 0
 #define lampSol(n,b,x) #(b<<4)|(x)
 ;p1a:            .equ $0020
 ;p1f:            .equ $0025
@@ -21,24 +24,24 @@ curSol:         .equ $001F
 ;p4a:            .equ $0033
 ;p4f:            .equ $0038
 ;digitsToRefresh:       .equ $0039 ;  0-15
-refresh_dispBit:       .equ $001F
+refresh_dispBit:.equ $001F
 digitA:         .equ $0020
 digitB:         .equ $0021
-digit1:         .equ $0022
-digit21:        .equ digit1+22
-digit40:        .equ $004C
-curSwitch:      .equ $004E ; 0 - 7
+digit1:         .equ $0022 ; ascii, beginning of upper display
+digit21:        .equ digit1+22 ; beginning of lower display
+digit40:        .equ $004C ; end of lower display
+curSwitch:      .equ $004E ; 0 - 7, the next row to strobe
 switchTemp:     .equ $004D
 switchY:        .equ $004C
-switch1:        .equ $0050
-switch8:        .equ $0057
-sswitch1:       .equ $0058
+strobe0:        .equ $0050 ; status of switches in strobe 0, lsb = return 0
+strobe7:        .equ $0057
+sswitch1:       .equ $0058 ; used for settling switches, same contents as strobe
 sswitch8:       .equ $005F
-queueLow:       .equ $0060
-queueLowEnd:    .equ $0067
-queueHigh:      .equ $0070
-queueLeft:      .equ $0068 ; 
-queueA:         .equ $0078
+queueLow:       .equ $0060 ; LSB of address to jump to
+queueLowEnd:    .equ $0067 ; upper end of array
+queueHigh:      .equ $0070 ; MSB of address to jump to
+queueLeft:      .equ $0068 ; time left before activating this item
+queueA:         .equ $0078 ; value to load into A before jump
 p1a:            .equ $0080 ; 10mil
 p1h:            .equ $0087 ; 1s
 p2a:            .equ $0088 ; 10mil
@@ -87,3 +90,6 @@ solDir:         .equ U6a_dir
 U2:             .equ $2000
 U3:             .equ $3000
 U3end:          .equ $3FFF
+
+#define TIMER_TICK 16 ; ms, how often timer fires
+#define SWITCH_SPEED 2

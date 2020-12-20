@@ -170,6 +170,23 @@ seed:
 
 
 loop:
+    ldA #00000001b
+    bit flags
+    ifne ; timer tick
+        jsr game_timerTick
+
+        ldA #00000001
+        bit lamp1+0
+        ifne ; in game
+            jsr handleBlinkScore
+        endif
+
+        ldA flags
+        and #11111110b
+        stA flags
+    endif
+
+    ; check queue
     ldX curQueueStart
     cpX curQueueEnd
     ifne
@@ -203,6 +220,8 @@ afterQueueRun:
                     jsr syncDigits
                     jsr game_afterQueue
                     jsr refreshDisplays
+                    ldA #2000/TIMER_TICK
+                    stA scoreBlinkTimer
                 endif
             endif
         endif
@@ -237,7 +256,7 @@ irq:
     ifeq
         jmp afterSwitch
     endif
-        ldA #2
+        ldA #0+SWITCH_SPEED
         stA U4_timer
 
         ldX curSwitch
@@ -248,7 +267,7 @@ irq:
         stA switchTemp 
 
         ldA returns
-        eor switch1, X ; 1 = switch != new
+        eor strobe0, X ; 1 = switch != new
         and switchTemp ; 1 = switch != new AND is settled
         stA switchTemp
 
@@ -266,7 +285,7 @@ l_switch:
             bit switchTemp
             ifne ; switch changed
                 phA
-                and switch1, X
+                and strobe0, X
                 ifeq ; was off, now on
                     stY switchY
 
@@ -340,8 +359,8 @@ l_switch:
 
                 plA
                 phA
-                eor switch1, X
-                stA switch1, X
+                eor strobe0, X
+                stA strobe0, X
 
                 plA
             endif
@@ -367,6 +386,16 @@ afterSwitchChanged:
             ldX #0
         endif
         stX curSwitch  
+
+        dec timer
+        ifeq
+            ldA flags
+            orA #00000001b
+            stA flags
+
+            ldA #0+TIMER_TICK/SWITCH_SPEED
+            stA timer
+        endif
 afterSwitch: 
 
     ; update lamps
