@@ -38,7 +38,7 @@ l_refresh:
     stA U5b
 
     inX
-    dec digitsToRefresh
+    deY
     bne l_refresh
 
     rts
@@ -53,15 +53,13 @@ refreshDisplays:
     ldA #00010000b
     stA refresh_dispBit
     ldX #digit1-2
-    ldA #22
-    stA digitsToRefresh
+    ldY #22
     jsr refreshDisplay
 
     ldA #00100000b
     stA refresh_dispBit
     ldX #digit21-2
-    ldA #22
-    stA digitsToRefresh
+    ldY #22
     jsr refreshDisplay
 
     plA
@@ -132,8 +130,7 @@ initSys80B:
     ldA #00110000b
     stA refresh_dispBit
     ldX #digit1-2
-    ldA #10
-    stA digitsToRefresh
+    ldY #10
     jsr refreshDisplay
 
 ; set initial display commands
@@ -162,4 +159,34 @@ l_text:
     bne l_text
 e_text:
     plA
+    rts
+
+syncDigits:
+    ldA #$20 ; ' '
+    stA digit1+8
+    stA digit1+9
+    stA digit1+11
+    stA digit21+8
+    stA digit21+9
+    stA digit21+11
+    ldA curBall
+    stA digit1+10
+
+    ldX #p1a
+    ldY #digit1
+    ldA #8
+    jsr copy
+    ldX #p2a
+    ldY #digit1+12
+    ldA #8
+    jsr copy
+    ldX #p3a
+    ldY #digit21
+    ldA #8
+    jsr copy
+    ldX #p4a
+    ldY #digit21+12
+    ldA #8
+    jsr copy
+
     rts

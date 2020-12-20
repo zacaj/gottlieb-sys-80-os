@@ -177,6 +177,7 @@ loop:
         ifne ; active address
             ldA queueLeft-queueLow, X
             ifeq ; timer expired
+                ; load queue address
                 ldA queueHigh-queueLow, X 
                 stA queueTemp+1
                 ldA 0, X
@@ -184,17 +185,27 @@ loop:
                 ldA #0
                 stA queueHigh-queueLow, X
                 ldA queueA-queueLow, X
+                
+                ; step queue
+                ldX curQueueStart
+                cpX #queueLowEnd
+                ifeq
+                    ldX #queueLow
+                else
+                    inX 
+                endif
+                stX curQueueStart
                 jmp (queueTemp)
+afterQueueRun:
+                ldA #0001b
+                bit lamp1+0
+                ifne ; in game
+                    jsr syncDigits
+                    jsr game_afterQueue
+                    jsr refreshDisplays
+                endif
             endif
         endif
-afterQueueRun:
-        ldX curQueueStart
-        inX 
-        cpX #queueLowEnd
-        ifeq
-            ldX #queueLow
-        endif
-        stX curQueueStart
     endif
 
     jsr game_loop
@@ -296,10 +307,11 @@ l_switch:
                     stA queueLeft-queueLow, Y
 
                     ; increment queue
-                    inY
                     cpY #queueLowEnd
                     ifeq
                         ldY #queueLow
+                    else
+                        inY
                     endif
                     stY curQueueEnd
 
@@ -308,16 +320,16 @@ l_switch:
                     tXA
                     phA
                     ldX #t_switch-textStart
-                    ldY #digit1+3
+                    ldY #digit21+3
                     jsr writeText
                     ldA switchY
                     and #00001111b
                     lsr A
                     adc #$30
-                    stA digit1+3+9
+                    stA digit21+3+9
                     ldA curSwitch
                     adc #$30
-                    stA digit1+3+8
+                    stA digit21+3+8
                     jsr refreshDisplays
                     plA
                     tAX

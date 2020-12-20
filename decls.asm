@@ -27,7 +27,6 @@ digitB:         .equ $0021
 digit1:         .equ $0022
 digit21:        .equ digit1+22
 digit40:        .equ $004C
-digitsToRefresh:       .equ $004D ; 0 - 21 -> ignore, ignore, digit1 - digit 20
 curSwitch:      .equ $004E ; 0 - 7
 switchTemp:     .equ $004D
 switchY:        .equ $004C
@@ -40,6 +39,15 @@ queueLowEnd:    .equ $0067
 queueHigh:      .equ $0070
 queueLeft:      .equ $0068 ; 
 queueA:         .equ $0078
+p1a:            .equ $0080 ; 10mil
+p1h:            .equ $0087 ; 1s
+p2a:            .equ $0088 ; 10mil
+p2h:            .equ $008F ; 1s
+p3a:            .equ $0090 ; 10mil
+p3h:            .equ $0097 ; 1s
+p4a:            .equ $0098 ; 10mil
+p4h:            .equ $009F ; 1s
+gameRAM:        .equ $00A0 ; and on
 
 
 U4:             .equ $0200  ; 0200-021F	U4 registers, switch matrixU5a:            .equ U5+$00

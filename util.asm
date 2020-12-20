@@ -183,3 +183,98 @@ addScore:
 
 e_addScore:
     rts
+
+; X: source
+; Y: dest
+; A: amount
+copy:
+    phA
+    ldA 0, X
+    stA 0, Y
+    inX
+    inY
+    plA
+    seC
+    sbc #1
+    bne copy
+    rts
+
+; X: dest
+; Y: amount
+; A: value
+set:
+    stA 0, X
+    inX
+    deY
+    bne set
+    rts
+
+setXToCurPlayer10:
+    phA
+    ldA curPlayer
+    asl A
+    asl A
+    asl A
+    adc #p1h-1
+    tAX
+    plA
+    rts
+
+#define pushAll \ phA
+#defcont        \ tXA
+#defcont        \ phA
+#defcont        \ tYA
+#defcont        \ phA
+
+#define pullAll \ plA
+#defcont        \ tAY
+#defcont        \ plA
+#defcont        \ tAX
+#defcont        \ plA
+
+score10xA:
+    pushAll
+    tSX
+    ldA $100+3, X
+    jsr setXToCurPlayer10
+    ldY #7
+    jsr addScore
+    pullAll
+    rts
+#define score10x(a) ldA #0+a \ jsr score10xA
+score100xA:
+    pushAll
+    tSX
+    ldA $100+3, X
+    jsr setXToCurPlayer10
+    deX
+    ldY #6
+    jsr addScore
+    pullAll
+    rts
+score1kxA:
+    pushAll
+    tSX
+    ldA $100+3, X
+    jsr setXToCurPlayer10
+    deX
+    deX
+    ldY #5
+    jsr addScore
+    pullAll
+    rts
+score10kxA:
+    pushAll
+    tSX
+    ldA $100+3, X
+    jsr setXToCurPlayer10
+    deX
+    deX
+    deX
+    ldY #4
+    jsr addScore
+
+    pullAll
+    rts
+
+#define done() jmp afterQueueRun

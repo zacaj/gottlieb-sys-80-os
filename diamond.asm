@@ -19,21 +19,25 @@
 
 #include "os.asm"
 
+tempa:          .equ gameRAM+$00 ; 10mil
+temph:          .equ gameRAM+$07 ; 1s
 
 .org U3 + (64*2)
 
 game_init:
 game_loop:
+game_afterQueue:
     rts
 
 swGameOver:
     cmp #$47 ; start button  ih
     ifeq
-        ldA #1<<6
+        ldA #1<<6 ; trough switch
         bit switch1+4
         ifne
             jsr startGame
         endif
+        done()
     endif
     cmp #$66 ; outhole  uj
     ifeq
@@ -43,10 +47,48 @@ swGameOver:
     ifeq
         ldA lLock
         jsr fireSolenoid
+        done()
     endif
-    jmp afterQueueRun
+    done()
+
+startGame:
+    ldA #$20 ; ' '
+    ldX #p1a
+    ldY #p4h-p1a+1
+    jsr set
+    ldX #tempa
+    ldY #temph-tempa+1
+    jsr set
+
+    ldA #$30 ; '0'
+    stA p1h-0
+    stA p1h-1
+
+    ldA #0
+    stA curPlayer
+    ldA #$31 ; '1'
+    stA curBall
+
+    jsr startBall
+
+    rts
+
+startBall:
+    ldA lBallRelease
+    jsr fireSolenoid
+
+    ldA lEnableFlippers
+    jsr turnOnSolenoid
+
+    rts
+
 nothing:
     nop
+    jmp afterQueueRun
+
+outhole:
+    ldA cOuthole
+    jsr fireSolenoid
     jmp afterQueueRun
 
 right1:
@@ -54,55 +96,31 @@ right1:
     jmp afterQueueRun
 
 queen: 
-    nop
-    ldA lamp1
-    eor #00001111b
-    stA lamp1
     jmp afterQueueRun
 
 ace: ; yd
-    ldA lEnableFlippers
-    jsr turnOnSolenoid
     jmp afterQueueRun
 joker: ; yf
     ldA lEnableFlippers
-    jsr fireSolenoid
+    jsr turnOnSolenoid
     jmp afterQueueRun
 leftLane: ; yg
-    ldA fLeftRamp
-    jsr fireSolenoid
     jmp afterQueueRun
 rightLane: ; yh
-    ldA fTopDome
-    jsr fireSolenoid
     jmp afterQueueRun
 skillshot: ; yj
-    ldA lBallRelease
-    jsr fireSolenoid
     jmp afterQueueRun
 ten: ; td
-    ldA cTopDrop
-    jsr fireSolenoid
     jmp afterQueueRun
 jack: ; tf
-    ldA cRightDrop
-    jsr fireSolenoid
     jmp afterQueueRun
 ramp: ; tg
-    ldA fBottomDome
-    jsr fireSolenoid
     jmp afterQueueRun
 leftSpinner: ; th
-    ldA cKnocker
-    jsr fireSolenoid
     jmp afterQueueRun
 rightSpinner: ; tj
-    ldA cOuthole
-    jsr fireSolenoid
     jmp afterQueueRun
 lock: ; tk
-    ldA lBottomTrip
-    jsr fireSolenoid
     jmp afterQueueRun
 
 leftSideLane: ; ak
@@ -112,6 +130,10 @@ leftSideLane: ; ak
     jsr addScore
     jsr refreshDisplays
     jmp afterQueueRun
+
+tenPoints: ; rf
+    score10x(3)
+    done()
     
 
 
@@ -124,8 +146,8 @@ switchCallbacks:
     .dw nothing \.dw nothing \.dw nothing \.dw nothing \.dw nothing \.dw nothing \.dw nothing \.dw nothing 
     .dw nothing \.dw nothing \.dw nothing \.dw nothing \.dw nothing \.dw nothing \.dw nothing \.dw nothing 
     .dw nothing \.dw nothing \.dw right1  \.dw nothing \.dw ten \.dw ace \.dw nothing \.dw nothing 
-    .dw nothing \.dw nothing \.dw nothing \.dw nothing \.dw jack   \.dw joker \.dw queen \.dw nothing 
+    .dw nothing \.dw nothing \.dw nothing \.dw tenPoints \.dw jack   \.dw joker \.dw queen \.dw nothing 
     .dw nothing \.dw nothing \.dw nothing \.dw nothing \.dw ramp \.dw leftLane \.dw nothing \.dw nothing 
     .dw nothing \.dw nothing \.dw nothing \.dw nothing \.dw leftSpinner \.dw rightLane \.dw nothing \.dw nothing 
-    .dw nothing \.dw nothing \.dw nothing \.dw nothing \.dw rightSpinner \.dw skillshot \.dw nothing \.dw nothing 
+    .dw nothing \.dw nothing \.dw nothing \.dw nothing \.dw rightSpinner \.dw skillshot \.dw outhole \.dw nothing 
     .dw leftSideLane \.dw nothing \.dw nothing \.dw nothing \.dw lock \.dw nothing \.dw nothing \.dw nothing 
