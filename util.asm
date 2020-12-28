@@ -1,7 +1,27 @@
+
+#define pushAll \ phA
+#defcont        \ tXA
+#defcont        \ phA
+#defcont        \ tYA
+#defcont        \ phA
+
+#define pullAll \ plA
+#defcont        \ tAY
+#defcont        \ plA
+#defcont        \ tAX
+#defcont        \ plA
+
+#define pushAX  \ phA
+#defcont        \ tXA
+#defcont        \ phA
+
+#define pullAX  \ plA
+#defcont        \ tAX
+#defcont        \ plA
+
+
 turnOffCurSolenoid:
-    phA
-    tXA
-    phA
+    pushAX
 
     ldA #11110000b
     bit curSol
@@ -42,16 +62,12 @@ turnOffCurSolenoid:
     ldA #00000000b
     stA curSol
 
-    plA
-    tAX
-    plA
+    pullAX
     rts
 
 ; A: solenoid to turn off
 turnOffSolenoid:
-    phA
-    tXA
-    phA
+    pushAX
     tSX
     ldA $100+2, X
 
@@ -59,6 +75,8 @@ turnOffSolenoid:
     stA curSol
     jsr turnOffCurSolenoid
     stX curSol
+
+    pullAX
     rts
 
 ; A: solenoid to turn on
@@ -224,17 +242,6 @@ setXToCurPlayer10:
     plA
     rts
 
-#define pushAll \ phA
-#defcont        \ tXA
-#defcont        \ phA
-#defcont        \ tYA
-#defcont        \ phA
-
-#define pullAll \ plA
-#defcont        \ tAY
-#defcont        \ plA
-#defcont        \ tAX
-#defcont        \ plA
 
 score10xA:
     pushAll
@@ -256,6 +263,7 @@ score100xA:
     jsr addScore
     pullAll
     rts
+#define score1Kx(a) ldA #0+a \ jsr score1kxA
 score1kxA:
     pushAll
     tSX
@@ -283,16 +291,36 @@ score10kxA:
 
 #define done() jmp afterQueueRun
 
+setXtoEmptyQueue:
+    ldX curQueue
+    phA
+l_findQueue:
+    ldA queueHigh-queueLow, X
+    beq foundQueue
+    cpX #queueLowEnd
+    ifeq
+        ldX #queueLow
+    else
+        inX
+    endif
+    jmp l_findQueue
+foundQueue: ; X = valid queue position
+    plA
+    rts
+
 #define wait(t) \ phA
 #defcont        \ ldA #0+t/TIMER_TICK
 #defcont        \ jsr _wait
 
 _wait:
-    ldX curQueueEnd
+    jsr setXtoEmptyQueue
     stA queueLeft-queueLow, X
     plA 
+    clC
+    adc #1
     stA 0, X
     plA 
+    adc #0
     stA queueHigh-queueLow, X
     plA 
     stA queueA-queueLow, X
@@ -304,6 +332,14 @@ _wait:
     else
         inX
     endif
-    stX curQueueEnd
+    stX curQueue
 
     jmp afterQueueRun
+
+#define lampOn(n) \ ldA lc(n)
+#defcont          \ orA lb(n)
+#defcont          \ stA lc(n)
+
+#define flashLamp(n) \ ldA lc(n)
+#defcont             \ orA lbf(n)
+#defcont             \ stA lc(n)

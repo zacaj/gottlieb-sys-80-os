@@ -7,27 +7,64 @@
 #define fBottomDome #7
 #define cKnocker #8
 #define cOuthole #9
-#define lBottomTrip lampSol(18,5,0100b)
-#define lBallRelease lampSol(2,1,0100b)
-#define lLock lampSol(13,4,0010b)
-#define lKickback lampSol(14,4,0100b)
-#define lLeftTrip lampSol(15,4,1000b)
-#define lTopTrip lampSol(16,5,0001b)
-#define lRightTrip lampSol(17,5,0010b)
-#define lEnableFlippers lampSol(0,1,0001b)
-#define lTilt lampSol(1,1,0010b)
+#define cBottomTrip lampSol(18,5,0100b)
+#define cBallRelease lampSol(2,1,0100b)
+#define cLock lampSol(13,4,0010b)
+#define cKickback lampSol(14,4,0100b)
+#define cLeftTrip lampSol(15,4,1000b)
+#define cTopTrip lampSol(16,5,0001b)
+#define cRightTrip lampSol(17,5,0010b)
+#define cEnableFlippers lampSol(0,1,0001b)
+#define cTilt lampSol(1,1,0010b)
+
+#define lFlush100 32
+#define l1x 36
+#define lLeftLane 47
+#define lSkillTop 42
 
 #include "os.asm"
 
 tempa:          .equ gameRAM+$00 ; 10mil
 temph:          .equ gameRAM+$07 ; 1s
+gFlags:         .equ gameRAM+$08 ; UUUUUUU trough settling
 
 .org U3 + (64*2)
 
 game_init:
+    jsr startAttract
 game_loop:
 game_afterQueue:
 game_timerTick:
+    rts
+
+startAttract:
+    ldA #10000000b
+    ;stA lamp1+0
+    ldA #10000000b
+    stA lamp1+4
+
+    ldA #11110101b
+    ;stA lamp1+1
+    ;adc #$10
+    ;stA lamp1+2
+    ;adc #$10
+    ;stA lamp1+3
+    ;adc #$10
+    ;stA lamp1+4
+    ;adc #$10
+    stA lamp1+5
+    ;adc #$10
+    stA lamp1+6
+    ;adc #$10
+    stA lamp1+7
+    ;adc #$10
+    stA lamp1+8
+    ;adc #$10
+    stA lamp1+9
+    stA lamp1+10
+    stA lamp1+11
+    stA lamp1+12
+
     rts
 
 swGameOver:
@@ -36,7 +73,7 @@ swGameOver:
         ldA #1<<6 ; trough switch
         bit strobe0+4
         ifne
-            jsr startGame
+            jmp startGame
         endif
         done()
     endif
@@ -46,7 +83,8 @@ swGameOver:
     endif
     cmp #$74 ; lock
     ifeq
-        ldA lLock
+        wait(300)
+        ldA cLock
         jsr fireSolenoid
         done()
     endif
@@ -70,20 +108,34 @@ startGame:
     ldA #$31 ; '1'
     stA curBall
 
-    jsr startBall
-
-    rts
-
-startBall:
-    ldA lBallRelease
-    jsr fireSolenoid
-
-    ldA lEnableFlippers
-    jsr turnOnSolenoid
-
     jsr syncDigits
 
-    rts
+    jmp startBall
+
+startBall: ; no exit
+    jsr syncDigits
+    
+    ldA #0
+    ldX #lamp1
+    ldY #lamp12-lamp1+1
+    jsr set
+
+    flashLamp(lSkillTop)
+
+    lampOn(lFlush100)
+
+    ldA cEnableFlippers
+    jsr turnOnSolenoid
+
+    lampOn(l1x)
+
+    lampOn(lLeftLane)
+
+    ldY #255
+    ldA cBallRelease
+    jsr fireSolenoidFor
+
+    done()
 
 startButton:
     ldA #$31 ; '1'
@@ -127,47 +179,84 @@ nothing:
     jmp afterQueueRun
 
 outhole:
+    wait(200)
     ldA cOuthole
     jsr fireSolenoid
-    jmp afterQueueRun
+    done()
 
 trough: ; ug
-    wait(100)
+    wait(300)
+
+    ldA #1b
+    bit gFlags
+    ifne
+        done()
+    endif
+
+    ldA gFlags
+    orA #1b
+    stA gFlags
+
     ldA #1<<6
     bit strobe0+4
     ifne
+        ; end ball
         ldY #t_bonus-textStart
         jsr setAtoOtherDisplay
         tAX
         jsr writeText
         wait(700)
+
+        score1Kx(1)
+
+        ; ball done, advance game
         
         ldA curPlayer
         cmp #3
-        beq nextBall
+        beq nextBall ; if on player 3, go to next ball
 
+        ; if not on player 3, check if next player is active
         inc curPlayer
         jsr setXToCurPlayer10
         inX
         ldA 0, X
         cmp #$20 ; ' '
         ifeq
+            ; next player not active (current player is last player)
 nextBall:
+            ; go to next ball
             inc curBall
-            ldA #0
+
+            ldA #0 ; go back to first player
             stA curPlayer
+
+            ; check if this was the last ball
             ldA curBall
             cmp #$34 ; '4'
             ifAge ; game over
-                ldA lEnableFlippers
+                ldA cEnableFlippers
                 jsr turnOffSolenoid
+
                 jsr syncDigits
-                done()
+                jsr startAttract
+
+                jmp e_trough
             endif
         endif
         
-        jsr startBall
+        ; player+ball updated, start next ball
+
+        ldA gFlags
+        and #11111110b
+        stA gFlags
+
+        jmp startBall
     endif
+
+e_trough:
+    ldA gFlags
+    and #11111110b
+    stA gFlags
 
     done()
 
@@ -181,10 +270,15 @@ queen:
     jmp afterQueueRun
 
 ace: ; yd
-    jmp afterQueueRun
+    score10x(1)
+    wait(500)
+    score10x(2)
+    done()
 joker: ; yf
-    ldA lEnableFlippers
+    ldA cEnableFlippers
     jsr turnOnSolenoid
+    ldA cOuthole
+    jsr fireSolenoid
     jmp afterQueueRun
 leftLane: ; yg
     jmp afterQueueRun
@@ -213,10 +307,8 @@ leftSideLane: ; ak
     jsr refreshDisplays
     jmp afterQueueRun
 
-tenPoints: ; rf
+sling: ; rf
     score10x(1)
-    wait(500)
-    score10x(2)
     done()
     
 
@@ -231,7 +323,7 @@ switchCallbacks:
     .dw nothing \.dw nothing \.dw nothing \.dw nothing \.dw nothing \.dw nothing \.dw nothing \.dw nothing 
     .dw nothing \.dw nothing \.dw nothing \.dw nothing \.dw nothing \.dw nothing \.dw nothing \.dw nothing 
     .dw nothing \.dw nothing \.dw right1  \.dw nothing \.dw ten \.dw ace \.dw nothing \.dw nothing 
-    .dw nothing \.dw nothing \.dw nothing \.dw tenPoints \.dw jack   \.dw joker \.dw queen \.dw nothing 
+    .dw nothing \.dw nothing \.dw nothing \.dw sling \.dw jack   \.dw joker \.dw queen \.dw nothing 
     .dw nothing \.dw nothing \.dw nothing \.dw nothing \.dw ramp \.dw leftLane \.dw trough \.dw startButton 
     .dw nothing \.dw nothing \.dw nothing \.dw nothing \.dw leftSpinner \.dw rightLane \.dw nothing \.dw nothing 
     .dw nothing \.dw nothing \.dw nothing \.dw nothing \.dw rightSpinner \.dw skillshot \.dw outhole \.dw nothing 

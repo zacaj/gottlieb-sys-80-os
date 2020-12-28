@@ -145,8 +145,8 @@ initSys80B:
 
     rts
 
-; X: location of text relative to textStart
-; Y: address in digit# to write to
+; X: address in digit# to write to
+; Y: location of text relative to textStart
 ; text must be null terminated (\000)
 writeText:
     phA
@@ -227,15 +227,45 @@ syncCurPlayer:
     jsr setAtoCurPlayerFirstDigit
     tAX
 
+
+    ; copy player
+
     ldA curPlayer
     asl A
     asl A
     asl A
     adc #p1a
+    phA ; A = cur player 10 mil digit
+
+    ; fix blank positions
+    tAX ; X = cur player 10 mil digit
+    ldY #p1h-p1a+1
+l_findFirstDigit:
+    ldA 0, X
+    inX
+    deY
+    cmp #$20 ; ' '
+    beq l_findFirstDigit
+    ; X = first filled in digit+1
+l_zeroBlankDigits:
+    ldA 0, X
+    cmp #$20 ; ' '
+    ifeq
+        ldA #$30 ; '0'
+        stA 0, X
+    endif
+    inX
+    deY
+    bne l_zeroBlankDigits
+    
+    plA
     tAY
+    jsr setAtoCurPlayerFirstDigit
+    tAX
 
     ldA #8
-    jmp copy
+    jsr copy
+    rts
 
 handleBlinkScore:
     dec scoreBlinkTimer

@@ -6,15 +6,20 @@ curBall:        .equ $0001 ; '1'-'3' or 0 in game over
 flags:          .equ $0002 ; UUUUUUU | timer ticked
 timer:          .equ $0003 ; decrements to 0 every 16ms
 scoreBlinkTimer:.equ $0004 ; blinks the player's score off/on
-curQueueStart:  .equ $000E ; queueLow-queueLowEnd
-curQueueEnd:    .equ $000F ; queueLow-queueLowEnd
-queueTemp:      .equ $000C ; +
-lamp1:          .equ $0010 ; lower nibble: lamp state.  upper nibble: flash lamps if set
+queueTemp:      .equ $000C ; D
+nextQueue:      .equ $000E
+curQueue:       .equ $000F
+lamp1:          .equ $0011 ; lower nibble: lamp state.  upper nibble: flash lamps if set
 lamp12:         .equ lamp1 + 11
-curLamp:        .equ $001C ; 1-12
+curLamp:        .equ $001D ; 1-12
 lampTemp:       .equ $001E
 curSol:         .equ $001F ; currently firing solenoid or 0
 #define lampSol(n,b,x) #(b<<4)|(x)
+#define lc(n) (lamp1 + (n/4))
+#define lb(n) #(1b<<(n%4))
+#define lf(n) #(10000b<<(n%4))
+#define lbf(n) #(10001b<<(n%4))
+
 ;p1a:            .equ $0020
 ;p1f:            .equ $0025
 ;p2a:            .equ $0026
@@ -24,13 +29,13 @@ curSol:         .equ $001F ; currently firing solenoid or 0
 ;p4a:            .equ $0033
 ;p4f:            .equ $0038
 ;digitsToRefresh:       .equ $0039 ;  0-15
-refresh_dispBit:.equ $001F
 digitA:         .equ $0020
 digitB:         .equ $0021
 digit1:         .equ $0022 ; ascii, beginning of upper display
 digit21:        .equ digit1+22 ; beginning of lower display
 digit40:        .equ $004C ; end of lower display
 curSwitch:      .equ $004E ; 0 - 7, the next row to strobe
+refresh_dispBit:.equ $004F
 switchTemp:     .equ $004D
 switchY:        .equ $004C
 strobe0:        .equ $0050 ; status of switches in strobe 0, lsb = return 0
@@ -39,8 +44,8 @@ sswitch1:       .equ $0058 ; used for settling switches, same contents as strobe
 sswitch8:       .equ $005F
 queueLow:       .equ $0060 ; LSB of address to jump to
 queueLowEnd:    .equ $0067 ; upper end of array
-queueHigh:      .equ $0070 ; MSB of address to jump to
-queueLeft:      .equ $0068 ; time left before activating this item
+queueHigh:      .equ $0070 ; MSB of address to jump to.  queue entry is only valid if this is non-zero
+queueLeft:      .equ $0068 ; time left before activating this item (runs at 0)
 queueA:         .equ $0078 ; value to load into A before jump
 p1a:            .equ $0080 ; 10mil
 p1h:            .equ $0087 ; 1s

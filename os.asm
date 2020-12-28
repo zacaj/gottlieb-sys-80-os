@@ -45,32 +45,6 @@ l_clear:
     ;ldA #00000001b
     ;stA lampData
 
-    ldA #10000000b
-    ;stA lamp1+0
-    ldA #10000000b
-    stA lamp1+4
-
-    ldA #10100000b
-    ;stA lamp1+1
-    ;adc #$10
-    ;stA lamp1+2
-    ;adc #$10
-    ;stA lamp1+3
-    ;adc #$10
-    ;stA lamp1+4
-    ;adc #$10
-    stA lamp1+5
-    ;adc #$10
-    stA lamp1+6
-    ;adc #$10
-    stA lamp1+7
-    ;adc #$10
-    stA lamp1+8
-    ;adc #$10
-    stA lamp1+9
-    stA lamp1+10
-    stA lamp1+11
-    stA lamp1+12
 
 ; lets start another riot
     ldA #01111111b
@@ -122,9 +96,11 @@ seed:
 ; todo
 
     ldX #queueLow
-    stX curQueueStart
-    stX curQueueEnd
+    stX curQueue
+    stX nextQueue
 
+    ldX #1
+    stX curLamp
 
     ldA #$20
     stA digit21+2
@@ -187,7 +163,7 @@ l_tickQueue:
         bne l_tickQueue
 
         ; check in game timers
-        ldA #00000001
+        ldA #00000001b
         bit lamp1+0
         ifne ; in game
             jsr handleBlinkScore
@@ -199,45 +175,43 @@ l_tickQueue:
     endif
 
     ; check queue
-    ldX curQueueStart
-    cpX curQueueEnd
-    ifne
-        ldA queueHigh-queueLow, X
-        ifne ; active address
-            ldA queueLeft-queueLow, X
-            ifeq ; timer expired
-                ; load queue address
-                ldA queueHigh-queueLow, X 
-                stA queueTemp+1
-                ldA 0, X
-                stA queueTemp+0
-                ldA #0
-                stA queueHigh-queueLow, X
-                ldA queueA-queueLow, X
-                
-                ; step queue
-                ldX curQueueStart
-                cpX #queueLowEnd
-                ifeq
-                    ldX #queueLow
-                else
-                    inX 
-                endif
-                stX curQueueStart
-                jmp (queueTemp)
+    ldX nextQueue
+    ldA queueHigh-queueLow, X
+    ifne ; active address
+        ldA queueLeft-queueLow, X
+        ifeq ; timer expired
+            ; load queue address
+            ldA queueHigh-queueLow, X 
+            stA queueTemp+1
+            ldA 0, X
+            stA queueTemp+0
+            ldA #0
+            stA queueHigh-queueLow, X
+            ldA queueA-queueLow, X
+            
+            jmp (queueTemp)
 afterQueueRun:
-                ldA #0001b
-                bit lamp1+0
-                ifne ; in game
-                    jsr syncCurPlayer
-                    jsr game_afterQueue
-                    ldA #2000/TIMER_TICK
-                    stA scoreBlinkTimer
-                endif
-                jsr refreshDisplays
+            ldA #0001b
+            bit lamp1+0
+            ifne ; in game
+                jsr syncCurPlayer
+                jsr game_afterQueue
+                ldA #2000/TIMER_TICK
+                stA scoreBlinkTimer
             endif
+            jsr refreshDisplays
         endif
     endif
+
+    ; increment queue
+    ldX nextQueue
+    cpX #queueLowEnd
+    ifeq
+        ldX #queueLow
+    else
+        inX
+    endif
+    stX nextQueue
 
     jsr game_loop
 
@@ -271,15 +245,15 @@ irq:
         ldA #0+SWITCH_SPEED
         stA U4_timer
 
-        ldX curSwitch
+        ldY curSwitch
 
         ldA returns
-        eor sswitch1, X ; 1 = switch not settled
+        eor sswitch1, Y ; 1 = switch not settled
         eor #11111111b ; 1 = switch is settled
         stA switchTemp 
 
         ldA returns
-        eor strobe0, X ; 1 = switch != new
+        eor strobe0, Y ; 1 = switch != new
         and switchTemp ; 1 = switch != new AND is settled
         stA switchTemp
 
@@ -291,15 +265,17 @@ irq:
             asl A
             asl A
             asl A
-            tAY
+            tAX
             ldA #00000001b ; bit in the strobe to check
 l_switch:
             bit switchTemp
             ifne ; switch changed
                 phA
-                and strobe0, X
+                and strobe0, Y
                 ifeq ; was off, now on
-                    stY switchY
+                    stX switchY
+                    jsr setXtoEmptyQueue
+                    stX curQueue
 
                     ; check if in game over or not
                     ldA #00000001b
@@ -307,48 +283,48 @@ l_switch:
 
                     ifeq 
                         ; in game over
-                        ldY curQueueEnd
+                        ldX curQueue
                         ldA #swGameOver&$FF
-                        stA 0, Y
+                        stA 0, X
                         ldA #swGameOver>>8
-                        stA queueHigh-queueLow, Y
+                        stA queueHigh-queueLow, X
                     else ; not in game over
                         ; store address in queue
-                        ldA switchCallbacks+1, Y
-                        ldY curQueueEnd
-                        stA queueHigh-queueLow, Y
-                        ldY switchY
-                        ldA switchCallbacks+0, Y
-                        ldY curQueueEnd
-                        stA 0, Y
+                        ldX switchY
+                        ldA switchCallbacks+1, X
+                        ldX curQueue
+                        stA queueHigh-queueLow, X
+                        ldX switchY
+                        ldA switchCallbacks+0, X
+                        ldX curQueue
+                        stA 0, X
                     endif
 
                     ; compute switch number
                     ldA switchY
                     lsr A
                     and #00000111b
-                    stA queueA-queueLow, Y
+                    stA queueA-queueLow, X
                     ldA switchY
                     and #11110000b
-                    orA queueA-queueLow, Y
-                    stA queueA-queueLow, Y
+                    orA queueA-queueLow, X
+                    stA queueA-queueLow, X
 
-                    ; enable entry
                     ldA #0
-                    stA queueLeft-queueLow, Y
+                    stA queueLeft-queueLow, X
 
                     ; increment queue
-                    cpY #queueLowEnd
+                    cpX #queueLowEnd
                     ifeq
-                        ldY #queueLow
+                        ldX #queueLow
                     else
-                        inY
+                        inX
                     endif
-                    stY curQueueEnd
+                    stX curQueue
 
-#if 1
+#if 0
                     ; show switch on screen
-                    tXA
+                    tYA
                     phA
                     ldY #t_switch-textStart
                     ldX #digit21+3
@@ -363,27 +339,27 @@ l_switch:
                     stA digit21+3+8
                     jsr refreshDisplays
                     plA
-                    tAX
+                    tAY
 #endif
 
-                    ldY switchY
+                    ldX switchY
                 endif
 
                 plA
                 phA
-                eor strobe0, X
-                stA strobe0, X
+                eor strobe0, Y
+                stA strobe0, Y
 
                 plA
             endif
-            inY
-            inY
+            inX
+            inX
             asl A
             bne l_switch
 afterSwitchChanged:
 
         ldA returns
-        stA sswitch1, X
+        stA sswitch1, Y
 
 
         ldA strobes
@@ -392,13 +368,15 @@ afterSwitchChanged:
             ldA #00000001b
         endif
         stA strobes
-        inX
-        cpX #8
+        inY
+        cpY #8
         ifeq
-            ldX #0
+            ldY #0
         endif
-        stX curSwitch  
+        stY curSwitch  
 
+
+        ; also trigger timers
         dec timer
         ifeq
             ldA flags
