@@ -1,5 +1,6 @@
 
 RAM:			.equ $0000  ; thru 017F
+stackTop:       .equ $0100
 stackBottom:    .equ $017F
 curPlayer:      .equ $0000 ; 0-3
 curBall:        .equ $0001 ; '1'-'3' or 0 in game over
@@ -7,18 +8,18 @@ flags:          .equ $0002 ; UUUUUUU | timer ticked
 timer:          .equ $0003 ; decrements to 0 every 16ms
 scoreBlinkTimer:.equ $0004 ; blinks the player's score off/on
 queueTemp:      .equ $000C ; D
-nextQueue:      .equ $000E
-curQueue:       .equ $000F
+nextQueue:      .equ $000E ; address within queueLow thru queueLowEnd.  the next queue entry to check and maybe run
+curQueue:       .equ $000F ; address within queueLow thru queueLowEnd.  the queue entry following the most recently populated
 lamp1:          .equ $0011 ; lower nibble: lamp state.  upper nibble: flash lamps if set
 lamp12:         .equ lamp1 + 11
 curLamp:        .equ $001D ; 1-12
 lampTemp:       .equ $001E
 curSol:         .equ $001F ; currently firing solenoid or 0
-#define lampSol(n,b,x) #(b<<4)|(x)
-#define lc(n) (lamp1 + (n/4))
-#define lb(n) #(1b<<(n%4))
-#define lf(n) #(10000b<<(n%4))
-#define lbf(n) #(10001b<<(n%4))
+#define lampSol(n,c,x) (c<<4)|(x) ; represents a solenoid driven by a lamp, pass to turnOnSolenoid, etc.  n = lamp number.  c=column, 1-12.  x = the bit (0001b thru 1000b).
+#define lc(n) (lamp1 + (n/4)) ; gets a lamp 'column', 1-12
+#define lb(n) (1b<<(n%4)) ; the bit for this lamp, to be stored in lc(1-12)
+#define lf(n) (10000b<<(n%4)) ; the bit for this lamp to flash, to be stored in lc(1-12)
+#define lbf(n) (10001b<<(n%4)) ; the bit for this lamp to be on and flash, to be stored in lc(1-12)
 
 ;p1a:            .equ $0020
 ;p1f:            .equ $0025
