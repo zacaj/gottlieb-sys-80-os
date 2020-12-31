@@ -7,6 +7,8 @@ curBall:        .equ $0001 ; '1'-'3' or 0 in game over
 flags:          .equ $0002 ; UUUUUUU | timer ticked
 timer:          .equ $0003 ; decrements to 0 every 16ms
 scoreBlinkTimer:.equ $0004 ; blinks the player's score off/on
+pfX:            .equ $0005 ; multiplies scoring
+scoreTemp:      .equ $0006 ; stores pf x during score calculation
 queueTemp:      .equ $000C ; D
 nextQueue:      .equ $000E ; address within queueLow thru queueLowEnd.  the next queue entry to check and maybe run
 curQueue:       .equ $000F ; address within queueLow thru queueLowEnd.  the queue entry following the most recently populated
@@ -98,4 +100,5 @@ U3:             .equ $3000
 U3end:          .equ $3FFF
 
 #define TIMER_TICK 16 ; ms, how often timer fires
-#define SWITCH_SPEED 2
+#define SWITCH_SPEED 2 ; how fast to run the switch interrupt (1 = 1/850th of a second?)
+#define TIMER_ADJUST 6 ; how many switch interrupts = 16ms

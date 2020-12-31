@@ -124,6 +124,9 @@ seed:
     ldA 00001111b
     stA lampData
 
+    ldA 1
+    stA pfX
+
     jsr game_init
 
     ; test, turn on L44-47
@@ -149,7 +152,6 @@ seed:
 
 
 loop:
-
     ldA 00000001b
     bit >flags
     ifne ; timer tick
@@ -248,9 +250,15 @@ irq:
 
         ldY >curSwitch
 
+#if 0
+        ; two pass settle
         ldA >returns
         eor sswitch1, Y ; 1 = switch not settled
         eor 11111111b ; 1 = switch is settled
+#else
+        ; instant settle
+        ldA 11111111b
+#endif
         stA switchTemp 
 
         ldA >returns
@@ -384,7 +392,7 @@ afterSwitchChanged:
             orA 00000001b
             stA flags
 
-            ldA 0+TIMER_TICK/SWITCH_SPEED
+            ldA TIMER_ADJUST
             stA timer
         endif
 #endif

@@ -199,11 +199,31 @@ playSound:
     clI
     rts
 
-
+; adds score * pfX
 ; A: amount to add (1-9)
-; X: address in digit1-40 to add to
+; X: address to add to
 ; Y: max number of digits to affect
 addScore:
+    phA
+    ldA >pfX
+    stA scoreTemp
+    plA
+    pushAll
+l_addScoreX:
+    ; restore values
+    tSX
+    ldA $100+3, X ; A
+    phA
+    ldA $100+1, X ; Y
+    phA ; push Y again
+    tXA
+    tAY
+    ldX $100+2, Y ; X
+    plA
+    tAY
+    plA
+
+l_addScore_overflow:
     ; check if blank
     phA
     ldA 0, X
@@ -229,12 +249,59 @@ addScore:
 
         ; carry to next digit
         ldA 1
-        jmp addScore
+        jmp l_addScore_overflow
     else
         stA 0, X
     endif
 
 e_addScore:
+    dec scoreTemp
+    bne l_addScoreX
+
+    pullAll
+    rts
+
+; A: amount to subtract (1-9)
+; X: address to subtract from
+; Y: max number of digits to affect
+subtractScore:
+    ; negate A
+    stA scoreTemp
+    ldA 255
+    seC
+    sbc >scoreTemp
+
+    ; check if blank
+    phA
+    ldA 0, X
+    cmp $20 ; ' 
+    ifeq
+        ldA $30
+        stA 0, X
+    endif
+    plA
+
+    ; do the math
+    seC
+    adc 0, X
+    cmp $30 ; '0'
+    ifAlt
+        ; overflowed
+        clC
+        adc 10
+        stA 0, X
+        deX
+        deY
+        beq e_subScore
+
+        ; carry to next digit
+        ldA 1
+        jmp subtractScore
+    else
+        stA 0, X
+    endif
+
+e_subScore:
     rts
 
 ; Y: source
@@ -274,6 +341,7 @@ setXToCurPlayer10:
     rts
 
 
+#define score10x(a) ldA 0+a \ jsr score10xA
 score10xA:
     pushAll
     tSX
@@ -283,7 +351,7 @@ score10xA:
     jsr addScore
     pullAll
     rts
-#define score10x(a) ldA 0+a \ jsr score10xA
+#define score100x(a) ldA 0+a \ jsr score100xA
 score100xA:
     pushAll
     tSX
@@ -319,6 +387,64 @@ score10kxA:
     jsr addScore
 
     pullAll
+    rts
+#define score100Kx(a) ldA 0+a \ jsr score100kxA
+score100kxA:
+    pushAll
+    tSX
+    ldA $100+3, X
+    jsr setXToCurPlayer10
+    deX
+    deX
+    deX
+    deX
+    ldY 3
+    jsr addScore
+
+    pullAll
+    rts
+
+
+; X = starting position
+; Y = max number of bytes to affect
+; leaves A = first >0 position, or = X+Y if no >0 found
+cleanScore:
+    deX
+    inY
+    ; step 1, remove 0s until >0 is found
+l_leadingZero:
+    inX
+    deY
+    ifeq
+        tXA
+        phA
+        jmp e_cleanScore
+    endif
+    ldA 0, X
+    cmp $30 ; '0'
+    ifeq
+        ldA $20 ; ' '
+        stA 0, X
+    endif
+    cmp $20 ; ' '
+    beq l_leadingZero
+    ; X = first >0 
+    tXA
+    phA
+    ; step 2, add 0s where empty
+l_emtpy:
+    ldA 0, X
+    cmp $20 ; ' '
+    ifeq
+        ldA $30 ; '0'
+        stA 0, X
+    endif
+    inX
+    deY
+    bne l_emtpy
+
+e_cleanScore:
+    plA
     rts
 
 #define done() jmp afterQueueRun

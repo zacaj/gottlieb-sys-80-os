@@ -58,9 +58,21 @@
 tempa:          .equ gameRAM+$00 ; 10mil
 temph:          .equ gameRAM+$07 ; 1s
 #define TroughSettleBit     1<<0
-#define MultiballBit        1<<1
+#define MultiballBit        1<<1 ; in mutliball
+#define IgnoreBottomDropBit 1<<2
+#define MbInvalidBit        1<<3 ; no switches hit yet during mb
 gFlags:         .equ gameRAM+$08
 x:              .equ gameRAM+$0A ; 1-15
+leftIgnore:     .equ gameRAM+$0B ; bits 2-6 = left drop 1-5
+rightIgnore:    .equ gameRAM+$0B ; bits 2-6 = right drop 1-5
+topIgnore:      .equ gameRAM+$0C ; bits 2-5 = top drop 1-4
+rampTimer:      .equ gameRAM+$0D
+skillshotTimer: .equ gameRAM+$0E
+#define SkillshotTime       750
+p_flush:        .equ gameRAM+$10 ; +3 bits 0-3: L8-11, bit 4: L7
+p_jackpot:      .equ gameRAM+$14 ; +3 bits 1-7: L21-27
+bonusa:         .equ gameRAM+$20
+bonush:         .equ gameRAM+$27
 
 .org U3 + (64*2)
 
@@ -68,7 +80,35 @@ game_init:
     jsr startAttract
 game_loop:
 game_afterQueue:
+    rts
+
 game_timerTick:
+    ldA >rampTimer
+    ifne
+        dec rampTimer
+        ifeq
+            lampOff(lRamp)
+        endif
+    endif
+
+    ldA >skillshotTimer
+    ifne
+        dec skillshotTimer
+        ifeq
+            ldA SkillshotTime/TIMER_TICK
+            stA skillshotTimer
+
+            ldA lb(lSkillSpinner)
+            bit >lc(lSkillAll)
+            ifne
+                ldA lb(lSkillAll)
+            else
+                ldA >lc(lSkillAll)
+                lsr A
+            endif
+            stA lc(lSkillAll)
+        endif
+    endif
     rts
 
 startAttract:
@@ -148,6 +188,16 @@ startGame:
     ldA $31 ; '1'
     stA curBall
 
+    ldX 0
+l_resetPlayers:
+    ldA 0
+    stA p_flush, X
+    ldA 00011110b
+    stA p_jackpot, X
+    inX
+    cpX 4
+    bne l_resetPlayers
+
     jsr syncDigits
 
     jmp startBall
@@ -155,36 +205,59 @@ startGame:
 startBall: ; no exit
     ldA 0
     stA gFlags
+    stA rampTimer
 
     ; turn off all lights
     ldA 0
     ldX lamp1
     ldY lamp12-lamp1+1
     jsr set
+    ldA $20 ; ' '
+    ldX bonusa
+    ldY 4
+    jsr set
+    ldA $30 ; '0'
+    ldX bonusa+5
+    ldY 3
+    jsr set
+    ldA $31 ; '1'
+    stA bonusa+4
 
     jsr syncDigits
 
-    ldY 80
+    jsr resetDrops
+    jsr tripBottomDrop
 
-    ldA cLeftDrop
-    jsr fireSolenoidFor
-    wait(200)
-
-    ldA cTopDrop
-    jsr fireSolenoidFor
-    wait(200)
-
-    ldA cRightDrop
-    jsr fireSolenoidFor
-    wait(200)
+    ; set lights
 
     ldA 1
     stA x
     jsr syncX
 
-    flashLamp(lSkillTop)
+    lampOn(lSkillTop)
 
-    wait(1000)
+    ldX >curPlayer
+
+    ldA p_flush, X
+    and 00001111b
+    stA lc(lJack)
+    eor 11111111b
+    asl A
+    asl A
+    asl A
+    asl A
+    orA >lc(lJack)
+    stA lc(lJack)
+
+    ldA 00010000b
+    and p_flush, X
+    ifne
+        lampOn(lTen)
+    else
+        flashLamp(lTen)
+    endif
+
+    jsr syncJackpot
 
     lampOn(lFlush100)
 
@@ -192,6 +265,9 @@ startBall: ; no exit
     jsr turnOnSolenoid
 
     lampOn(lLeftLane)
+
+    ldA SkillshotTime/TIMER_TICK
+    stA skillshotTimer
 
 releaseBall:
     ldA sBallStart
@@ -250,6 +326,8 @@ outhole:
     ldA cOuthole
     jsr fireSolenoid
 
+    jsr checkMbInvalid
+
     ldA MultiballBit
     bit >gFlags
     ifne ; in multiball
@@ -275,59 +353,143 @@ trough: ; ug
 
     ldA 1<<6
     bit >strobe0+4
-    ifne
-        ; end ball
-        ldY t_bonus-textStart
-        jsr setAtoOtherDisplay
-        tAX
-        jsr writeText
-        wait(700)
+    ifeq ; ball not in trough, ignore
+        jmp e_trough
+    endif
+
+    ; end ball
+
+    ; display bonus
+    ldY t_bonus-textStart
+    jsr setAtoOtherDisplay
+    tAX
+    jsr writeText
+
+
+    jsr setAtoOtherDisplay
+    clC
+    adc 9
+    tAX
+    ldA >x
+    clC
+    adc $30
+    stA 0, X
+
+    ldX bonusa
+    ldY 6
+    jsr cleanScore
+
+    jsr setAtoOtherDisplay
+    clC
+    adc 12
+    tAX
+    ldY bonusa
+    ldA 8
+    jsr copy 
+
+    ldA >x
+    stA pfX
+
+    wait(500)
+
+l_bonus:
+    ldX bonusa
+    ldY 6
+    jsr cleanScore
+    ; A = first used position
+
+    cmp bonush-3 
+    ifAge ; first digit is 1000s
+        ldA >bonush-3 ; is it also zero?
+        cmp $31
+        bmi e_bonus ; end count
 
         score1Kx(1)
 
-        ; ball done, advance game
-        
-        ldA >curPlayer
-        cmp 3
-        beq nextBall ; if on player 3, go to next ball
+        ldX bonush-3 ; subtract whatever is left
+        ldY 5
+    else
+        score10Kx(1)
 
-        ; if not on player 3, check if next player is active
-        inc curPlayer
-        jsr setXToCurPlayer10
-        inX
-        ldA 0, X
-        cmp $20 ; ' '
-        ifeq
-            ; next player not active (current player is last player)
-nextBall:
-            ; go to next ball
-            inc curBall
-
-            ldA 0 ; go back to first player
-            stA curPlayer
-
-            ; check if this was the last ball
-            ldA >curBall
-            cmp $34 ; '4'
-            ifAge ; game over
-                ldA cEnableFlippers
-                jsr turnOffSolenoid
-
-                jsr syncDigits
-                jsr startAttract
-
-                jmp e_trough
-            endif
-        endif
-        
-        ; player+ball updated, start next ball
-
-        ldA >gFlags
-        and ~TroughSettleBit
-        stA gFlags
-
-        jmp startBall
+        ldX bonush-4
+        ldY 4
     endif
+    ldA 1
+    jsr subtractScore
+
+    jsr setAtoOtherDisplay
+    clC
+    adc 12
+    tAX
+    ldY bonusa
+    ldA 8
+    jsr copy     
+
+    wait(32)
+    jmp l_bonus
+e_bonus:
+
+    wait(300)
+
+    ; ball done, store status
+    ldX >curPlayer
+
+    ldA >lc(lJack)
+    lsr A
+    lsr A
+    lsr A
+    lsr A
+    eor 00001111b
+    stA p_flush, X
+    ldA >lc(lTen)
+    ifpl ; ten not flashing -> solid
+        ldA 00010000b
+        orA p_flush, X
+        stA p_flush, X
+    endif
+    
+    ; advance game
+    
+    ldA >curPlayer
+    cmp 3
+    beq nextBall ; if on player 3, go to next ball
+
+    ; if not on player 3, check if next player is active
+    inc curPlayer
+    jsr setXToCurPlayer10
+    inX
+    ldA 0, X
+    cmp $20 ; ' '
+    ifeq
+        ; next player not active (current player is last player)
+nextBall:
+        ; go to next ball
+        inc curBall
+
+        ldA 0 ; go back to first player
+        stA curPlayer
+
+        ; check if this was the last ball
+        ldA >curBall
+        cmp $34 ; '4'
+        ifAge ; game over
+            ldA cEnableFlippers
+            jsr turnOffSolenoid
+
+            jsr syncDigits
+            jsr startAttract
+
+            jmp e_trough
+        endif
+    endif
+    
+    ; player+ball updated, start next ball
+
+    ldA >gFlags
+    and ~TroughSettleBit
+    stA gFlags
+
+    jmp startBall
 
 e_trough:
     ldA >gFlags
@@ -336,8 +498,81 @@ e_trough:
 
     done()
 
+checkMbInvalid:
+    phA 
+
+    ldA >gFlags
+    and MbInvalidBit|MultiballBit
+    cmp MbInvalidBit|MultiballBit
+    ifeq 
+        ldA >gFlags
+        and ~MbInvalidBit
+        stA gFlags
+
+        ldA cLock
+        jsr fireSolenoid
+    endif
+
+    plA
+    rts
+
+resetDrops:
+    ldA 11111111b
+    stA leftIgnore
+    stA rightIgnore
+    stA topIgnore
+
+    ldY 125
+
+    ldA cLeftDrop
+    jsr fireSolenoidFor
+    wait(200)
+
+    ldA cTopDrop
+    jsr fireSolenoidFor
+    wait(200)
+
+    ldA cRightDrop
+    jsr fireSolenoidFor
+    wait(200)
+
+    ldA 00000000b
+    stA leftIgnore
+    stA rightIgnore
+    stA topIgnore
+
+    rts
+
+tripBottomDrop:
+    ldA IgnoreBottomDropBit
+    orA >gFlags
+    stA gFlags
+
+    ldA cBottomTrip
+    jsr fireSolenoid
+    wait(75)
+
+    ldA ~IgnoreBottomDropBit
+    and >gFlags
+    stA gFlags
+
+    rts
+
+advBonus:
+    ldA >pfX
+    phA
+    ldA 1
+    stA pfX
+    ldX bonush-3
+    ldY 4
+    jsr addScore
+    plA
+    stA pfX
+    rts
+
 leftLane: ; yg
     score10Kx(1)
+    jsr advBonus
     ldA lb(lLeftLane)
     bit >lc(lLeftLane)
     ifne 
@@ -346,6 +581,7 @@ leftLane: ; yg
     done()
 rightLane: ; yh
     score10Kx(1)
+    jsr advBonus
     ldA lb(lLeftLane)
     bit >lc(lLeftLane)
     ifeq 
@@ -365,21 +601,104 @@ advX:
 syncX:
     ldA MultiballBit
     bit >gFlags
-    ifne 
+    ifne ; in mb
         ldA >x
+        stA pfX
         asl A
         asl A
         asl A
         asl A
     else
+        ldA 1
+        stA pfX
         ldA >x
     endif
     stA lc(l1x)
+
     rts
+
+syncJackpot:
+    ldX >curPlayer
+
+    ldA >lc(lJackpot)
+    and 00010001b
+    stA lc(lJackpot)
+
+    ldA p_jackpot, X
+    and 00001110b
+    orA >lc(lJackpot)
+    stA lc(lJackpot)
+
+    
+    ldA p_jackpot, X
+    lsr A
+    lsr A
+    lsr A
+    lsr A
+    stA lc(ljackpoT)
+
+
+    ldA p_jackpot
+    and 11111110b
+    cmp 11111110b
+    ifeq ; jackpot spelled
+        flashLamp(lJokerSpecial)
+    else
+        lampOff(lJokerSpecial)
+    endif   
+
+    rts
+
+    
 skillshot: ; yj
-    ldA cTopTrip
-    jsr fireSolenoid
-    jmp checkRoyalFlush
+    ldA 0
+    stA skillshotTimer
+
+    ldA lb(lSkillAll)
+    bit >lc(lSkillAll)
+    ifne
+        ldA 00111000b
+        stA leftIgnore
+        ldA cLeftTrip
+        jsr fireSolenoid
+        wait(100)
+
+        ldA 00011000b
+        stA topIgnore
+        ldA cTopTrip
+        jsr fireSolenoid
+        wait(100)
+
+        ldA 00111000b
+        stA rightIgnore
+        ldA cRightTrip
+        jsr fireSolenoid
+        wait(100)
+        
+        jsr checkSpades
+    endif
+
+    ldA lb(lSkillTop)
+    bit >lc(lSkillTop)
+    ifne
+        ldA 00011000b
+        stA topIgnore
+        ldA cTopTrip
+        jsr fireSolenoid
+        
+        jsr checkSpades
+    endif
+
+    ldA lb(lSkillSpinner)
+    bit >lc(lSkillSpinner)
+    ifne
+        flashLamp(lSpinner)
+    endif
+
+    ldA 0
+    stA lc(lSkillAll)
+
+    done()
 ten: ; td
     score1Kx(5)
     lampOn(lTen)
@@ -405,27 +724,111 @@ checkRoyalFlush:
     cmp 00001111b
     ifeq ; jack - ace on solid
         ldA >lc(lTen)
-        and ~lbf(lTen)
-        cmp lbf(lTen)
+        and lbf(lTen)
+        cmp lb(lTen)
         ifeq ; ten on solid
             flashLamp(lLock)
 
             ldA 11110000b
             stA lc(lJack)
             flashLamp(lTen)
+
+            ldA lb(lFlush100)
+            bit >lc(lFlush100)
+            ifne
+                score100Kx(1)
+            else
+                ldA lb(lFlush250)
+                bit >lc(lFlush250)
+                ifne
+                    score100Kx(2)
+                    score10Kx(5)
+                else
+                    ldA lb(lFlushEb)
+                    bit >lc(lFlushEb)
+                    ifne
+                        score100Kx(5)
+                        ldA cKnocker
+                        jsr fireSolenoid
+                    else
+                        flashLamp(lJokerSpecial)
+                    endif
+                endif
+            endif
         endif
     endif
     done()
 
 joker: ; yf
-    score1Kx(5)
+    ldA lbf(lJokerSpecial)
+    bit >lc(lJokerSpecial)
+    ifne
+        score100Kx(2)
+        ldA cKnocker
+        jsr fireSolenoid
+        wait(150)
+        score100Kx(2)
+        ldA cKnocker
+        jsr fireSolenoid
+        wait(150)
+        score100Kx(2)
+        ldA cKnocker
+        jsr fireSolenoid
+        wait(150)
+        score100Kx(2)
+        ldA cKnocker
+        jsr fireSolenoid
+        wait(150)
+        score100Kx(2)
+        ldA cKnocker
+        jsr fireSolenoid
+        wait(150)
+
+        ldX >curPlayer
+        ldA 0
+        stA p_jackpot, X
+        jsr syncJackpot
+    else
+        score1Kx(5)
+    endif
     done()
 ramp: ; tg
-    score10Kx(1)
+    ldA lbf(lRamp)
+    bit >lc(lRamp)
+    ifne ; lit
+        score100Kx(1)
+        
+        ldA >rampTimer
+        cmp 3000/TIMER_TICK
+        ifAlt
+            adc 1000/TIMER_TICK
+            stA rampTimer
+        endif
+
+        ; advance jackpot
+        ldX >curPlayer
+        ldA p_jackpot, X
+        orA 00000001b
+        asl A
+        stA p_jackpot, X
+        jsr syncJackpot
+    else
+        score10Kx(1)
+    endif
+
+    ldA cLeftTrip
+    jsr fireSolenoid
     done()
 leftSpinner: ; th
 rightSpinner: ; tj
-    score1Kx(1)
+    jsr checkMbInvalid
+    ldA lbf(lSpinner)
+    ifne
+        score1Kx(1)
+        jsr advBonus
+    else
+        score100x(1)
+    endif
     done()
 lock: ; tk
     score1Kx(1)
@@ -448,20 +851,93 @@ lock: ; tk
     done()
 
 leftSideLane: ; ak
+    jsr checkMbInvalid
+
     score1Kx(2)
+    jsr advBonus
     lampOn(lKickback)
+
+    ldA cRightTrip
+    jsr fireSolenoid
     done()
 
 sling: ; rf
+    jsr checkMbInvalid
     score10x(1)
     done()
+
+; A = switch number
+; X = 'ignore' address to use
+; leaves Y = bit in the return
+checkDropDown:
+    phA
+
+    lsr A
+    lsr A
+    lsr A
+    lsr A ; A = strobe number
+    tAY
+    ldA 1
+l_checkDropDown_bit:
+    asl A
+    deY
+    bne l_checkDropDown_bit
+    ; A = bit in the return
+    tAY
+
+    and 0, X
+    ifne ; already set
+        done()
+    endif
+
+    tYA
+    orA 0, X
+    stA 0, X
+
+    plA
+    rts
 
 left1: ; qd
 left2: ; qf
 left3: ; qg
 left4: ; qg
 left5: ; qh
+    ldX leftIgnore
+    jsr checkDropDown
+    jsr checkMbInvalid
+
+    ; check bottom targets for drop
+    cmp $20 ; bottom one
+    ifeq 
+        ldA 01000000b ; bottom right
+        bit >rightIgnore
+        ifne
+            ldA cBottomDrop
+            jsr fireSolenoid
+        endif
+    endif
+
+    tYA
+    and 01000100b ; diamonds
+    ifne    
+        jsr checkDiamonds
+    else
+        jsr checkSpades
+    endif
+
     score1Kx(5)
+
+    ldX >leftIgnore
+    cpX 01111100b
+    ;ifeq 
+    ;    ldY 125
+    ;    ldA cLeftDrop
+    ;    jsr fireSolenoidFor
+    ;    wait(200)
+    ;    ldA 0
+    ;    stA leftIgnore
+    ;endif
+    jsr checkAllDropsDown
     done()
 
 right1: ; ed
@@ -469,17 +945,141 @@ right2: ; ef
 right3: ; eg
 right4: ; eh
 right5: ; ej
+    ldX rightIgnore
+    jsr checkDropDown
+    jsr checkMbInvalid
+
+    ; check bottom targets for drop
+    cmp $62 ; bottom one
+    ifeq 
+        ldA 00000100b ; bottom left
+        bit >leftIgnore
+        ifne
+            ldA cBottomDrop
+            jsr fireSolenoid
+        endif
+    endif
+
+    tYA
+    and 01000100b ; diamonds
+    ifne    
+        jsr checkDiamonds
+    else
+        jsr checkSpades
+    endif
+
     score1Kx(5)
+
+    ldX >rightIgnore
+    cpX 01111100b
+    ;ifeq 
+    ;    ldY 125
+    ;    ldA cRightDrop
+    ;    jsr fireSolenoidFor
+    ;    wait(200)
+    ;    ldA 0
+    ;    stA rightIgnore
+    ;endif
+    jsr checkAllDropsDown
     done()
 
 top1: ; wd
 top2: ; wf
 top3: ; wg
 top4: ; wh
+    ldX topIgnore
+    jsr checkDropDown
+    jsr checkMbInvalid
+
+    tYA
+    and 00100100b ; diamonds
+    ifne    
+        jsr checkDiamonds
+    else
+        jsr checkSpades
+    endif
+
     score1Kx(5)
+
+    ;ldX >topIgnore
+    ;cpX 01111100b
+    ;ifeq 
+    ;    ldY 125
+    ;    ldA cTopDrop
+    ;    jsr fireSolenoidFor
+    ;    wait(200)
+    ;    ldA 0
+    ;    stA topIgnore
+    ;endif
+    jsr checkAllDropsDown
     done()
 
+; see if all diamonds are down
+checkDiamonds:
+    ldA 01000100b
+    and >leftIgnore
+    cmp 01000100b
+    bne e_check
+    ldA 01000100b
+    and >rightIgnore
+    cmp 01000100b
+    bne e_check
+    ldA 00100100b
+    and >topIgnore
+    cmp 01000100b
+    bne e_check
+
+    ; all diamonds now down
+
+    ldA MultiballBit
+    bit >gFlags
+    ifne ; in multiball
+
+    else
+        flashLamp(lLock)
+    endif
+e_check:
+    rts
+checkSpades:
+    ldA 00111000b
+    and >leftIgnore
+    cmp 00111000b
+    bne e_check
+    ldA 00111000b
+    and >rightIgnore
+    cmp 00111000b
+    bne e_check
+    ldA 00011000b
+    and >topIgnore
+    cmp 00011000b
+    bne e_check
+
+    ; all spades now down
+    flashLamp(lRamp)
+    ldA 4000/TIMER_TICK
+    stA rampTimer
+    rts
+checkAllDropsDown:
+    ldA 01111100b
+    and >leftIgnore
+    cmp 01111100b
+    bne e_check
+    ldA 01111100b
+    and >rightIgnore
+    cmp 01111100b
+    bne e_check
+    ldA 00111100b
+    and >topIgnore
+    cmp 00111100b
+    bne e_check
+
+    jsr resetDrops
+    rts
+
+
+
 pop: ; wj
+    jsr checkMbInvalid
     score1Kx(1)
     done()
 
@@ -499,17 +1099,21 @@ leftOutlane: ; rg
         lampOff(lKickback)
     endif
 rightOutlane: ; rk
+    jsr checkMbInvalid
+    jsr advBonus
     score10Kx(1)
     done()
 leftInlane: ; rh
 rightInlane ; rj
+    jsr checkMbInvalid
+    jsr advBonus
     score1Kx(1)
     done()
 
 textStart:
 testText: .text " TEST TEXT \000"
 t_switch: .text " SWITCH XX \000"
-t_bonus:  .text "BONUS: \000"
+t_bonus:  .text "BONUS =  XX XXXXXXXX\000"
 
 .org U3
 switchCallbacks:

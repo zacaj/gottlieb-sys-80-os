@@ -154,6 +154,7 @@ loc		.equ	$00
 #define	ifge	logic_ifxx(BLO)
 #define	ifgt	logic_ifxx(BLS)
 #define ifAge   logic_ifxx(BMI)
+#define ifAlt   logic_ifxx(BPL)
 
 #define	else  	logic_else(0,0)
 #define	else_eq	logic_else(1,BEQ)

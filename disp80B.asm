@@ -224,8 +224,6 @@ syncDigits:
     rts
 
 syncCurPlayer:
-    jsr setAtoCurPlayerFirstDigit
-    tAX
 
 
     ; copy player
@@ -235,30 +233,36 @@ syncCurPlayer:
     asl A
     asl A
     adc p1a
-    phA ; A = cur player 10 mil digit
 
-    ; fix blank positions
-    tAX ; X = cur player 10 mil digit
-    ldY p1h-p1a+1
-l_findFirstDigit:
-    ldA 0, X
-    inX
-    deY
-    cmp $20 ; ' '
-    beq l_findFirstDigit
-    ; X = first filled in digit+1
-l_zeroBlankDigits:
-    ldA 0, X
-    cmp $20 ; ' '
-    ifeq
-        ldA $30 ; '0'
-        stA 0, X
-    endif
-    inX
-    deY
-    bne l_zeroBlankDigits
-    
+    phA
+    tAX
+    ldY 6
+    jsr cleanScore
     plA
+;    phA ; A = cur player 10 mil digit
+
+;    ; fix blank positions
+;    tAX ; X = cur player 10 mil digit
+;    ldY p1h-p1a+1
+;l_findFirstDigit:
+;    ldA 0, X
+;    inX
+;    deY
+;    cmp $20 ; ' '
+;    beq l_findFirstDigit
+;    ; X = first filled in digit+1
+;l_zeroBlankDigits:
+;    ldA 0, X
+;    cmp $20 ; ' '
+;    ifeq
+;        ldA $30 ; '0'
+;        stA 0, X
+;    endif
+;    inX
+;    deY
+;    bne l_zeroBlankDigits
+;    
+;    plA
     tAY
     jsr setAtoCurPlayerFirstDigit
     tAX
@@ -266,6 +270,7 @@ l_zeroBlankDigits:
     ldA 8
     jsr copy
     rts
+
 
 handleBlinkScore:
     dec scoreBlinkTimer
