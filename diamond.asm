@@ -54,9 +54,8 @@
 #define sBallStart $F3
 
 #include "os.asm"
-
-tempa:          .equ gameRAM+$00 ; 10mil
-temph:          .equ gameRAM+$07 ; 1s
+#define DIV_TIMER_TICK 250 ; ms, how often the div timer fires
+timerDiv:       .equ gameRAM+$00 ; counts down every timer tick
 #define TroughSettleBit     1<<0
 #define MultiballBit        1<<1 ; in mutliball
 #define IgnoreBottomDropBit 1<<2
@@ -86,6 +85,8 @@ diamondh:       .equ gameRAM+$2F
 .org U3 + (64*2)
 
 game_init:
+    ldA 1
+    stA timerDiv
     jsr startAttract
 game_loop:
     rts
@@ -104,11 +105,18 @@ game_timerTick:
         rts
     endif
 
-    ldA >rampTimer
-    ifne
-        dec rampTimer
-        ifeq
-            lampOff(lRamp)
+    dec timerDiv
+    ifeq
+        ldA DIV_TIMER_TICK/TIMER_TICK
+        stA timerDiv
+
+        ; do div timer stuff
+        ldA >rampTimer
+        ifne
+            dec rampTimer
+            ifeq
+                lampOff(lRamp)
+            endif
         endif
     endif
 
@@ -249,9 +257,6 @@ startGame:
     ldA $20 ; ' '
     ldX p1a
     ldY p4h-p1a+1
-    jsr set
-    ldX tempa
-    ldY temph-tempa+1
     jsr set
 
     ldA $30 ; '0'
@@ -775,7 +780,7 @@ syncJackpot:
     stA lc(ljackpoT)
 
 
-    ldA p_jackpot
+    ldA p_jackpot, X
     and 11111110b
     cmp 11111110b
     ifeq ; jackpot spelled
@@ -971,9 +976,9 @@ ramp: ; tg
         score100Kx(1)
         
         ldA >rampTimer
-        cmp 3000/TIMER_TICK
+        cmp 5000/DIV_TIMER_TICK
         ifAlt
-            adc 1000/TIMER_TICK
+            adc 6000/DIV_TIMER_TICK
             stA rampTimer
         endif
 
@@ -1348,7 +1353,7 @@ checkSpades:
         jsr syncJackpot
     else
         flashLamp(lRamp)
-        ldA 4000/TIMER_TICK
+        ldA 13000/DIV_TIMER_TICK
         stA rampTimer
     endif
 
