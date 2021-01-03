@@ -61,28 +61,49 @@ temph:          .equ gameRAM+$07 ; 1s
 #define MultiballBit        1<<1 ; in mutliball
 #define IgnoreBottomDropBit 1<<2
 #define MbInvalidBit        1<<3 ; no switches hit yet during mb
+#define SpadesTrippedBit    1<<4 ; set once any spades have been tripped this ball
+#define DiamondCollectBit   1<<5 ; set to pause count down while collecting
+#define StartSettleBit      1<<6
 gFlags:         .equ gameRAM+$08
 x:              .equ gameRAM+$0A ; 1-15
 leftIgnore:     .equ gameRAM+$0B ; bits 2-6 = left drop 1-5
-rightIgnore:    .equ gameRAM+$0B ; bits 2-6 = right drop 1-5
-topIgnore:      .equ gameRAM+$0C ; bits 2-5 = top drop 1-4
-rampTimer:      .equ gameRAM+$0D
-skillshotTimer: .equ gameRAM+$0E
+rightIgnore:    .equ gameRAM+$0C ; bits 2-6 = right drop 1-5
+topIgnore:      .equ gameRAM+$0D ; bits 2-5 = top drop 1-4
+rampTimer:      .equ gameRAM+$0E
+skillshotTimer: .equ gameRAM+$0F
 #define SkillshotTime       750
 p_flush:        .equ gameRAM+$10 ; +3 bits 0-3: L8-11, bit 4: L7
 p_jackpot:      .equ gameRAM+$14 ; +3 bits 1-7: L21-27
+#define LockLitBit          1<<0
+#define KickbackLitBit      1<<1
+#define JokerLitBit         1<<2
+p_flags:        .equ gameRAM+$18 ; +3
 bonusa:         .equ gameRAM+$20
 bonush:         .equ gameRAM+$27
+diamonda:       .equ gameRAM+$28
+diamondh:       .equ gameRAM+$2F
 
 .org U3 + (64*2)
 
 game_init:
     jsr startAttract
 game_loop:
+    rts
 game_afterQueue:
+    ldA >diamondh-4
+    cmp $20 ; ' '
+    ifne ; diamond bonus is active
+    endif
+
     rts
 
 game_timerTick:
+    ldA 0001b
+    bit >lamp1+0
+    ifeq ; not in game
+        rts
+    endif
+
     ldA >rampTimer
     ifne
         dec rampTimer
@@ -107,6 +128,51 @@ game_timerTick:
                 lsr A
             endif
             stA lc(lSkillAll)
+        endif
+    endif
+
+    ldA >diamondh-3
+    cmp $20 ; ' '
+    ifne ; diamond bonus is active
+        ldA >gFlags
+        and MbInvalidBit
+        ifeq
+            ldA >gFlags
+            and DiamondCollectBit
+            ifeq
+                ldX diamondh-3
+                ldY 5
+                ldA 1
+                jsr subtractScore
+
+                ldA 1b
+                bit >diamondh-5 ; 100k
+                ifne
+                    ldY t_diamond-textStart
+                else
+                    ldY t_dBonus-textStart
+                endif
+            else
+                ldY t_diamond-textStart
+            endif
+
+            jsr setAtoOtherDisplay
+            tAX
+            jsr writeText
+
+            ldX diamonda
+            ldY 6
+            jsr cleanScore
+
+            jsr setAtoOtherDisplay
+            clC
+            adc 12
+            tAX
+            ldY diamonda
+            ldA 8
+            jsr copy 
+
+            jsr refreshDisplays
         endif
     endif
     rts
@@ -167,6 +233,15 @@ swGameOver:
     done()
 
 startGame:
+    ldA StartSettleBit
+    bit >gFlags
+    ifne
+        done()
+    endif
+    orA >gFlags
+    stA gFlags
+
+
     ldA >sDealTheHand
     jsr playSound
     wait(950)
@@ -192,6 +267,7 @@ startGame:
 l_resetPlayers:
     ldA 0
     stA p_flush, X
+    stA p_flags, X
     ldA 00011110b
     stA p_jackpot, X
     inX
@@ -199,6 +275,11 @@ l_resetPlayers:
     bne l_resetPlayers
 
     jsr syncDigits
+
+
+    ldA >gFlags
+    and ~StartSettleBit
+    stA gFlags
 
     jmp startBall
 
@@ -222,6 +303,10 @@ startBall: ; no exit
     jsr set
     ldA $31 ; '1'
     stA bonusa+4
+    ldA $20 ; ' '
+    ldX diamonda
+    ldY diamondh-diamonda+1
+    jsr set
 
     jsr syncDigits
 
@@ -259,6 +344,22 @@ startBall: ; no exit
 
     jsr syncJackpot
 
+    ldA LockLitBit
+    and >p_flags, X
+    ifne
+        flashLamp(lLock)
+    endif
+    ldA JokerLitBit
+    and >p_flags, X
+    ifne
+        flashLamp(lJokerSpecial)
+    endif
+    ldA KickbackLitBit
+    and >p_flags, X
+    ifne
+        lampOn(lKickback)
+    endif
+
     lampOn(lFlush100)
 
     ldA cEnableFlippers
@@ -269,7 +370,7 @@ startBall: ; no exit
     ldA SkillshotTime/TIMER_TICK
     stA skillshotTimer
 
-releaseBall:
+releaseBall: ; no exit
     ldA sBallStart
     jsr playSound
 
@@ -360,32 +461,7 @@ trough: ; ug
     ; end ball
 
     ; display bonus
-    ldY t_bonus-textStart
-    jsr setAtoOtherDisplay
-    tAX
-    jsr writeText
-
-
-    jsr setAtoOtherDisplay
-    clC
-    adc 9
-    tAX
-    ldA >x
-    clC
-    adc $30
-    stA 0, X
-
-    ldX bonusa
-    ldY 6
-    jsr cleanScore
-
-    jsr setAtoOtherDisplay
-    clC
-    adc 12
-    tAX
-    ldY bonusa
-    ldA 8
-    jsr copy 
+    jsr showBonus
 
     ldA >x
     stA pfX
@@ -446,6 +522,31 @@ e_bonus:
         ldA 00010000b
         orA p_flush, X
         stA p_flush, X
+    endif
+
+    ldA 0
+    stA p_flags, X
+
+    ldA lbf(lKickback)
+    bit >lc(lKickback)
+    ifne
+        ldA KickbackLitBit
+        orA p_flags, X
+        stA p_flags, X
+    endif
+    ldA lbf(lJokerSpecial)
+    bit >lc(lJokerSpecial)
+    ifne
+        ldA JokerLitBit
+        orA p_flags, X
+        stA p_flags, X
+    endif
+    ldA lbf(lLock)
+    bit >lc(lLock)
+    ifne
+        ldA LockLitBit
+        orA p_flags, X
+        stA p_flags, X
     endif
     
     ; advance game
@@ -541,6 +642,10 @@ resetDrops:
     stA rightIgnore
     stA topIgnore
 
+    ldA >gFlags
+    and ~SpadesTrippedBit
+    stA gFlags
+
     rts
 
 tripBottomDrop:
@@ -555,6 +660,36 @@ tripBottomDrop:
     ldA ~IgnoreBottomDropBit
     and >gFlags
     stA gFlags
+
+    rts
+
+showBonus:
+    ldY t_bonus-textStart
+    jsr setAtoOtherDisplay
+    tAX
+    jsr writeText
+
+
+    jsr setAtoOtherDisplay
+    clC
+    adc 9
+    tAX
+    ldA >x
+    clC
+    adc $30
+    stA 0, X
+
+    ldX bonusa
+    ldY 6
+    jsr cleanScore
+
+    jsr setAtoOtherDisplay
+    clC
+    adc 12
+    tAX
+    ldY bonusa
+    ldA 8
+    jsr copy 
 
     rts
 
@@ -578,6 +713,8 @@ leftLane: ; yg
     ifne 
         jsr advX
     endif
+
+    jsr collectDiamondBonus
     done()
 rightLane: ; yh
     score10Kx(1)
@@ -643,12 +780,33 @@ syncJackpot:
     cmp 11111110b
     ifeq ; jackpot spelled
         flashLamp(lJokerSpecial)
+        lampOff(lRamp)
     else
         lampOff(lJokerSpecial)
     endif   
 
     rts
 
+tripDrops:
+    ldA 00111000b
+    stA leftIgnore
+    ldA cLeftTrip
+    jsr fireSolenoid
+    wait(100)
+
+    ldA 00011000b
+    stA topIgnore
+    ldA cTopTrip
+    jsr fireSolenoid
+    wait(100)
+
+    ldA 00111000b
+    stA rightIgnore
+    ldA cRightTrip
+    jsr fireSolenoid
+    wait(100)
+
+    rts
     
 skillshot: ; yj
     ldA 0
@@ -657,23 +815,11 @@ skillshot: ; yj
     ldA lb(lSkillAll)
     bit >lc(lSkillAll)
     ifne
-        ldA 00111000b
-        stA leftIgnore
-        ldA cLeftTrip
-        jsr fireSolenoid
-        wait(100)
+        ldA >gFlags
+        orA SpadesTrippedBit
+        stA gFlags
 
-        ldA 00011000b
-        stA topIgnore
-        ldA cTopTrip
-        jsr fireSolenoid
-        wait(100)
-
-        ldA 00111000b
-        stA rightIgnore
-        ldA cRightTrip
-        jsr fireSolenoid
-        wait(100)
+        jsr tripDrops
         
         jsr checkSpades
     endif
@@ -681,6 +827,12 @@ skillshot: ; yj
     ldA lb(lSkillTop)
     bit >lc(lSkillTop)
     ifne
+        ldA >gFlags
+        orA SpadesTrippedBit
+        stA gFlags
+
+        flashLamp(lAce100k)
+        
         ldA 00011000b
         stA topIgnore
         ldA cTopTrip
@@ -716,8 +868,16 @@ king: ; ud
     lampOn(lKing)
     jmp checkRoyalFlush
 ace: ; yd
-    score1Kx(5)
+    ldA lbf(lAce100k)
+    bit >lc(lAce100k)
+    ifeq
+        score1Kx(5)
+    else
+        score100Kx(1)
+    endif
+
     lampOn(lAce)
+
     jmp checkRoyalFlush
 checkRoyalFlush:
     ldA >lc(lJack)
@@ -751,38 +911,50 @@ checkRoyalFlush:
                         ldA cKnocker
                         jsr fireSolenoid
                     else
-                        flashLamp(lJokerSpecial)
+                        jsr special
                     endif
                 endif
+            endif
+            ldA lb(lFlushSpecial)
+            bit >lc(lFlushSpecial)
+            ifeq
+                ldA >lc(lFlushSpecial)
+                asl A
+                and 00001111b
+                stA lc(lFlushSpecial)
             endif
         endif
     endif
     done()
 
+special:
+    score100Kx(2)
+    ldA cKnocker
+    jsr fireSolenoid
+    wait(150)
+    score100Kx(2)
+    ldA cKnocker
+    jsr fireSolenoid
+    wait(150)
+    score100Kx(2)
+    ldA cKnocker
+    jsr fireSolenoid
+    wait(150)
+    score100Kx(2)
+    ldA cKnocker
+    jsr fireSolenoid
+    wait(150)
+    score100Kx(2)
+    ldA cKnocker
+    jsr fireSolenoid
+    wait(150)
+    rts
+
 joker: ; yf
     ldA lbf(lJokerSpecial)
     bit >lc(lJokerSpecial)
     ifne
-        score100Kx(2)
-        ldA cKnocker
-        jsr fireSolenoid
-        wait(150)
-        score100Kx(2)
-        ldA cKnocker
-        jsr fireSolenoid
-        wait(150)
-        score100Kx(2)
-        ldA cKnocker
-        jsr fireSolenoid
-        wait(150)
-        score100Kx(2)
-        ldA cKnocker
-        jsr fireSolenoid
-        wait(150)
-        score100Kx(2)
-        ldA cKnocker
-        jsr fireSolenoid
-        wait(150)
+        jsr special
 
         ldX >curPlayer
         ldA 0
@@ -826,10 +998,13 @@ rightSpinner: ; tj
     ifne
         score1Kx(1)
         jsr advBonus
+        jsr showBonus
     else
         score100x(1)
+        lampOff(lKickback)
     endif
     done()
+
 lock: ; tk
     score1Kx(1)
     lampOff(lKickback)
@@ -864,6 +1039,8 @@ leftSideLane: ; ak
 sling: ; rf
     jsr checkMbInvalid
     score10x(1)
+    lampOff(lSpinner)
+    lampOff(lAce100k)
     done()
 
 ; A = switch number
@@ -1014,29 +1191,136 @@ top4: ; wh
     jsr checkAllDropsDown
     done()
 
+rts1:
+    rts
 ; see if all diamonds are down
 checkDiamonds:
     ldA 01000100b
     and >leftIgnore
     cmp 01000100b
-    bne e_check
+    bne rts1
     ldA 01000100b
     and >rightIgnore
     cmp 01000100b
-    bne e_check
+    bne rts1
     ldA 00100100b
     and >topIgnore
-    cmp 01000100b
-    bne e_check
+    cmp 00100100b
+    bne rts1
 
     ; all diamonds now down
 
     ldA MultiballBit
     bit >gFlags
     ifne ; in multiball
-
+        ; ??
     else
         flashLamp(lLock)
+    endif
+
+    ldA >diamondh
+    cmp $20
+    ifne ; diamond bonus active
+collectDiamondBonus:
+        ldA >gFlags
+        orA DiamondCollectBit
+        stA gFlags
+        wait(750)
+
+l_diamond:
+        ldX diamonda
+        ldY 6
+        jsr cleanScore
+        ; A = first used position
+
+        cmp diamondh-3 
+        ifAge ; first digit is 1000s
+            ldA >diamondh-3 ; is it also zero?
+            cmp $31
+            bmi e_diamond ; end count
+
+            score1Kx(1)
+
+            ldX diamondh-3 
+            ldY 5
+        else
+            cmp diamondh-4
+            ifeq ; first is 10k
+                score10Kx(1)
+
+                ldX diamondh-4
+                ldY 4
+            else
+                score100Kx(1)
+
+                ldX diamondh-5
+                ldY 3
+            endif
+        endif
+        ldA 1
+        jsr subtractScore
+
+        wait(16)
+        jmp l_diamond
+e_diamond:
+        ldA >gFlags
+        orA DiamondCollectBit
+        stA gFlags
+
+        ldA $20 ; ' '
+        ldX diamonda
+        ldY diamondh-diamonda+1
+        jsr set
+
+        jsr syncDigits
+    else ; diamond bonus not active
+        ldA $30 ; '0'
+        ldX diamonda
+        ldY diamondh-diamonda+1
+        jsr set
+        ldA $32 ; '2'
+        stA diamondh-6
+
+        ; increase for spades up
+        ldA >pfX
+        phA
+        ldA 1
+        stA pfX
+
+        ldA leftIgnore
+        and 00111000b
+        jsr addToDiamondBonus
+        ldA rightIgnore
+        and 00111000b
+        jsr addToDiamondBonus
+        ldA topIgnore
+        and 00011000b
+        jsr addToDiamondBonus
+        jmp afterAdd
+addToDiamondBonus:
+        lsr A
+        ifeq
+            rts
+        endif
+        ifcc
+            phA
+            ldX diamonda+2
+            ldY 3
+            ldA 3
+            jsr addScore
+            plA
+        endif
+        jmp addToDiamondBonus
+afterAdd:     
+        plA
+        stA pfX
+
+        jsr resetDrops
+        jsr tripDrops
+
+        ldA >gFlags
+        and ~DiamondCollectBit
+        stA gFlags
     endif
 e_check:
     rts
@@ -1055,9 +1339,19 @@ checkSpades:
     bne e_check
 
     ; all spades now down
-    flashLamp(lRamp)
-    ldA 4000/TIMER_TICK
-    stA rampTimer
+    ldA SpadesTrippedBit
+    bit >gFlags
+    ifeq ; no spades tripped, light jackpot
+        ldX >curPlayer
+        ldA 11111110b
+        stA p_jackpot, X
+        jsr syncJackpot
+    else
+        flashLamp(lRamp)
+        ldA 4000/TIMER_TICK
+        stA rampTimer
+    endif
+
     rts
 checkAllDropsDown:
     ldA 01111100b
@@ -1081,13 +1375,33 @@ checkAllDropsDown:
 pop: ; wj
     jsr checkMbInvalid
     score1Kx(1)
+    lampOff(lSpinner)
     done()
 
 laneChange: ; rj
+    ldA lb(lLeftLane)
+    bit >lc(lLeftLane)
+    ifeq
+        lampOn(lLeftLane)
+    else
+        lampOff(lLeftLane)
+    endif
+    
+    wait(500)
+    ldA 1<<2
+    bit >strobe0+7
+    ifne
+        jsr showBonus
+    endif
+
     done()
 
 bottomDrop: ; rd
-    score10Kx(1)
+    ldA IgnoreBottomDropBit
+    bit >gFlags
+    ifeq
+        score10Kx(1)
+    endif
     done()
 
 leftOutlane: ; rg
@@ -1111,9 +1425,11 @@ rightInlane ; rj
     done()
 
 textStart:
-testText: .text " TEST TEXT \000"
-t_switch: .text " SWITCH XX \000"
-t_bonus:  .text "BONUS =  XX XXXXXXXX\000"
+testText:   .text " TEST TEXT \000"
+t_switch:   .text " SWITCH XX \000"
+t_bonus:    .text "BONUS =  XX XXXXXXXX\000"
+t_diamond:  .text "DIAMOND  =  XXXXXXXX\000"
+t_dBonus:   .text " BONUS   =  XXXXXXXX\000"
 
 .org U3
 switchCallbacks:
@@ -1125,3 +1441,12 @@ switchCallbacks:
     .dw left4 \.dw top4 \.dw right4           \.dw leftInlane     \.dw leftSpinner  \.dw rightLane  \.dw nothing \.dw nothing 
     .dw left5 \.dw pop  \.dw right5           \.dw rightInlane    \.dw rightSpinner \.dw skillshot  \.dw outhole \.dw nothing 
     .dw leftSideLane \.dw pop \.dw laneChange \.dw rightOutlane   \.dw lock         \.dw nothing    \.dw nothing \.dw nothing 
+
+; todo
+; diamonds down in mb
+; flashers?
+; diamond values?
+; x special?
+
+; all spades crash
+; double start
