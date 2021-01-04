@@ -102,11 +102,15 @@ loc		.equ	$00
 #defcont				\ .org loc+1
 #defcont	      		\#if x==0
 #defcont					\var2_ .set var1_-loc-2+3 
+#defcont					\#if var2_-128 > 0
+#defcont						\#error "branch too far"
+#defcont					\#else
 #defcont							\.push var1_+1, FLAG_ELSE
 #defcont							\ .byte var2_
 #defcont							\ .org var1_
 #defcont							\ jmp $
 #defcont							\ .org var1_+3
+#defcont                    \#endif
 ;#defcont					\#if var2_+127 < 0
 ;#defcont						\ .org var1_
 ;#defcont						\.push $+3, 1

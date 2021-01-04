@@ -173,7 +173,7 @@ playSound:
     seI
     phA
 
-    and 1111000b
+    and 11110000b
     ifeq ; lamp off
         ldA >lamp1+1
         and 00001110b
@@ -399,6 +399,22 @@ score100kxA:
     deX
     deX
     ldY 3
+    jsr addScore
+
+    pullAll
+    rts
+#define score1Mx(a) ldA 0+a \ jsr score1MxA
+score1MxA:
+    pushAll
+    tSX
+    ldA $100+3, X
+    jsr setXToCurPlayer10
+    deX
+    deX
+    deX
+    deX
+    deX
+    ldY 2
     jsr addScore
 
     pullAll

@@ -49,9 +49,63 @@
 #define lLock 46
 #define lLeftLane 47
 
-#define sCoin $F8
 #define sDealTheHand $00
+#define sRegMusicRepeat $01
+#define sUpbeatMusic $02 ; during hurry up
+#define sCrescendo $03
+#define sAggressiveMusic $04 ; in multiball
+#define sRegMusicVariety $05 ; after skilshot?
+#define sBonus $06
+#define sAggressiveCrescendo $07
+#define sCoin $18
+#define sPhaser $19
+#define sBadDrop $1A
+#define sShortHit $1B
+#define sShortBad $1C
+#define sDecrescendo $1D ; after royal flush completed
+#define sSling $1E
+#define sStopMusic $10
+#define sStartExt $11
+#define sStartCmd $12
+#define sBwaaa $13
+#define sLanding $14
+#define sChipsFalling $15
+#define sTheGameIsPokerAntiUp $16
+#define sCutTheDeck $17
 #define sBallStart $F3
+; ss = play sStartCmd first
+#define ssDontBlowIt $18 ; *8 = don't blow it
+#define ssLockUp $19 ; *9 = lock up
+#define ssJackpot $1A ; *A = jackpot
+#define ssDiamonds $1B ; *B = diamonds
+#define ssAce $1C ; *C = ace
+#define ssGiveMeYourBestShot $1D ; *D = give me your best shot
+#define ssComeOnTryMe $1E ; *E = come on, try me
+#define ssDealTheHand $13 ; 13 = deal the hand
+#define ssWowThatsABigOne $16 ; 16 = wow thats a big one (after jackpot collect)
+#define ssYoureGood $17 ; 17 = you're good (after diamond collect finishes)
+; se = play sStartExt first
+#define seGameOver $08
+#define seOoh $0D
+#define seAh $0E
+#define seRattle $15
+#define seShortBad $16 ; each digit collected in diamond bonus and jackpot
+#define seOutlane $17
+#define seRamp $1A
+#define seAdvX $1C
+#define seLaugh $1D
+#define seUpperLane $1E
+; 11 1E = bwa in
+; 11 0A = extended fizzle
+; 11 13 = phaser
+; 11 15 = rattle phaser
+; 11 16 = fast bad
+; 11 18 = slow bad = bad drop
+; 11 1A wave fizzle
+; 11 1B = short hit
+; 11 1C = long fizzle
+; ...1A F 1A F 1A F 1A f 1A F 12 F 19 F 11 F 16 F 195 F 11 F 16 F diamond count off sound
+; 12 19 = ? (during diamond start)
 
 #include "os.asm"
 #define DIV_TIMER_TICK 250 ; ms, how often the div timer fires
@@ -171,16 +225,25 @@ game_timerTick:
             ldX diamonda
             ldY 6
             jsr cleanScore
+            
+            cmp diamondh-3 
+            ifAge ; first digit is 1000s
+                ldA >diamondh-3 ; is it also zero?
+                cmp $31
+                ifmi ; empty
+                    jsr cancelDiamondBonus
+                endif
+            else
+                jsr setAtoOtherDisplay
+                clC
+                adc 12
+                tAX
+                ldY diamonda
+                ldA 8
+                jsr copy 
 
-            jsr setAtoOtherDisplay
-            clC
-            adc 12
-            tAX
-            ldY diamonda
-            ldA 8
-            jsr copy 
-
-            jsr refreshDisplays
+                jsr refreshDisplays
+            endif
         endif
     endif
     rts
@@ -252,7 +315,7 @@ startGame:
 
     ldA >sDealTheHand
     jsr playSound
-    wait(950)
+    wait(1600)
 
     ldA $20 ; ' '
     ldX p1a
@@ -465,6 +528,9 @@ trough: ; ug
 
     ; end ball
 
+    ldA sBonus
+    jsr playSound
+
     ; display bonus
     jsr showBonus
 
@@ -554,6 +620,9 @@ e_bonus:
         stA p_flags, X
     endif
     
+    ldA sStopMusic
+    jsr playSound
+
     ; advance game
     
     ldA >curPlayer
@@ -579,6 +648,11 @@ nextBall:
         ldA >curBall
         cmp $34 ; '4'
         ifAge ; game over
+            ldA sStartExt
+            jsr playSound
+            ldA seGameOver
+            jsr playSound
+
             ldA cEnableFlippers
             jsr turnOffSolenoid
 
@@ -617,6 +691,9 @@ checkMbInvalid:
 
         ldA cLock
         jsr fireSolenoid
+
+        ldA sAggressiveMusic
+        jsr playSound
     endif
 
     plA
@@ -717,20 +794,35 @@ leftLane: ; yg
     bit >lc(lLeftLane)
     ifne 
         jsr advX
+    else
+        ldA sStartExt
+        jsr playSound
+        ldA seUpperLane
+        jsr playSound
     endif
 
-    jsr collectDiamondBonus
     done()
 rightLane: ; yh
+
     score10Kx(1)
     jsr advBonus
     ldA lb(lLeftLane)
     bit >lc(lLeftLane)
     ifeq 
         jsr advX
+    else
+        ldA sStartExt
+        jsr playSound
+        ldA seUpperLane
+        jsr playSound
     endif
     done()
 advX:
+    ldA sStartExt
+    jsr playSound
+    ldA seAdvX
+    jsr playSound
+
     inc x
     ldA $F0
     bit >x
@@ -817,6 +909,13 @@ skillshot: ; yj
     ldA 0
     stA skillshotTimer
 
+    ldA lb(lSkillAll)|lb(lSkillTop)|lb(lSkillSpinner)
+    bit >lc(lSkillAll)
+    ifne
+        ldA sRegMusicVariety
+        jsr playSound
+    endif
+
     ldA lb(lSkillAll)
     bit >lc(lSkillAll)
     ifne
@@ -837,6 +936,11 @@ skillshot: ; yj
         stA gFlags
 
         flashLamp(lAce100k)
+        
+        ldA sStartCmd
+        jsr playSound
+        ldA ssAce
+        jsr playSound
         
         ldA 00011000b
         stA topIgnore
@@ -885,6 +989,9 @@ ace: ; yd
 
     jmp checkRoyalFlush
 checkRoyalFlush:
+    ldA sPhaser
+    jsr playSound
+
     ldA >lc(lJack)
     cmp 00001111b
     ifeq ; jack - ace on solid
@@ -892,7 +999,18 @@ checkRoyalFlush:
         and lbf(lTen)
         cmp lb(lTen)
         ifeq ; ten on solid
-            flashLamp(lLock)
+            ldA lbf(lLock)
+            bit >lc(lLock)
+            ifeq
+                flashLamp(lLock)
+                ldA sStartCmd
+                jsr playSound
+                ldA ssLockUp
+                jsr playSound
+            else
+                ldA sDecrescendo
+                jsr playSound
+            endif
 
             ldA 11110000b
             stA lc(lJack)
@@ -991,13 +1109,27 @@ ramp: ; tg
         jsr syncJackpot
     else
         score10Kx(1)
+        ldA sStartExt
+        jsr playSound
+        ldA seRamp
+        jsr playSound
     endif
 
     ldA cLeftTrip
     jsr fireSolenoid
     done()
 leftSpinner: ; th
+    ldA sShortHit
+    jsr playSound
+    ldA fLeftRamp
+    jsr fireSolenoid
+    jmp spinner
 rightSpinner: ; tj
+    ldA sShortHit
+    jsr playSound
+    ldA fBottomDome
+    jsr fireSolenoid
+spinner:
     jsr checkMbInvalid
     ldA lbf(lSpinner)
     ifne
@@ -1021,17 +1153,33 @@ lock: ; tk
         orA MultiballBit
         stA gFlags
         jsr syncX
+        
+        ldA sStartCmd
+        jsr playSound
+        ldA ssDontBlowIt
+        jsr playSound
+        wait(700)
+
         jmp releaseBall
     else
         wait(300)
+        ldA sStartExt
+        jsr playSound
+        ldA seRattle
+        jsr playSound
         ldA cLock
         jsr fireSolenoid
     endif
 
     done()
 
-leftSideLane: ; ak
+leftSideLane: ; qk
     jsr checkMbInvalid
+    
+    ldA sStartExt
+    jsr playSound
+    ldA seOoh
+    jsr playSound
 
     score1Kx(2)
     jsr advBonus
@@ -1043,6 +1191,8 @@ leftSideLane: ; ak
 
 sling: ; rf
     jsr checkMbInvalid
+    ldA sSling
+    jsr playSound
     score10x(1)
     lampOff(lSpinner)
     lampOff(lAce100k)
@@ -1108,6 +1258,8 @@ left5: ; qh
     endif
 
     score1Kx(5)
+    ldA sBadDrop
+    jsr playSound
 
     ldX >leftIgnore
     cpX 01111100b
@@ -1151,6 +1303,8 @@ right5: ; ej
     endif
 
     score1Kx(5)
+    ldA sBadDrop
+    jsr playSound
 
     ldX >rightIgnore
     cpX 01111100b
@@ -1182,6 +1336,9 @@ top4: ; wh
     endif
 
     score1Kx(5)
+
+    ldA sBadDrop
+    jsr playSound
 
     ;ldX >topIgnore
     ;cpX 01111100b
@@ -1220,70 +1377,32 @@ checkDiamonds:
     ifne ; in multiball
         ; ??
     else
-        flashLamp(lLock)
+        ldA lbf(lLock)
+        bit >lc(lLock)
+        ifeq
+            flashLamp(lLock)
+            ldA sStartCmd
+            jsr playSound
+            ldA ssLockUp
+            jsr playSound
+        endif
     endif
 
     ldA >diamondh
     cmp $20
     ifne ; diamond bonus active
-collectDiamondBonus:
-        ldA >gFlags
-        orA DiamondCollectBit
-        stA gFlags
-        wait(750)
-
-l_diamond:
-        ldX diamonda
-        ldY 6
-        jsr cleanScore
-        ; A = first used position
-
-        cmp diamondh-3 
-        ifAge ; first digit is 1000s
-            ldA >diamondh-3 ; is it also zero?
-            cmp $31
-            bmi e_diamond ; end count
-
-            score1Kx(1)
-
-            ldX diamondh-3 
-            ldY 5
-        else
-            cmp diamondh-4
-            ifeq ; first is 10k
-                score10Kx(1)
-
-                ldX diamondh-4
-                ldY 4
-            else
-                score100Kx(1)
-
-                ldX diamondh-5
-                ldY 3
-            endif
-        endif
-        ldA 1
-        jsr subtractScore
-
-        wait(16)
-        jmp l_diamond
-e_diamond:
-        ldA >gFlags
-        orA DiamondCollectBit
-        stA gFlags
-
-        ldA $20 ; ' '
-        ldX diamonda
-        ldY diamondh-diamonda+1
-        jsr set
-
-        jsr syncDigits
+        jsr collectDiamondBonus
     else ; diamond bonus not active
+        ldA sStartCmd
+        jsr playSound
+        ldA ssDiamonds
+        jsr playSound
+
         ldA $30 ; '0'
         ldX diamonda
         ldY diamondh-diamonda+1
         jsr set
-        ldA $32 ; '2'
+        ldA $32 ; '5'
         stA diamondh-6
 
         ; increase for spades up
@@ -1326,6 +1445,9 @@ afterAdd:
         ldA >gFlags
         and ~DiamondCollectBit
         stA gFlags
+
+        ldA sUpbeatMusic
+        jsr playSound
     endif
 e_check:
     rts
@@ -1351,10 +1473,20 @@ checkSpades:
         ldA 11111110b
         stA p_jackpot, X
         jsr syncJackpot
+
+        ldA sStartCmd
+        jsr playSound
+        ldA ssYoureGood
+        jsr playSound
     else
         flashLamp(lRamp)
         ldA 13000/DIV_TIMER_TICK
         stA rampTimer
+
+        ldA sStartCmd
+        jsr playSound
+        ldA ssJackpot
+        jsr playSound
     endif
 
     rts
@@ -1374,11 +1506,103 @@ checkAllDropsDown:
 
     jsr resetDrops
     rts
+collectDiamondBonus:
+    ldA >gFlags
+    orA DiamondCollectBit
+    stA gFlags
+    wait(750)
 
+l_diamond:
+    ldA 1
+    stA pfX
+
+    ldX diamonda
+    ldY 6
+    jsr cleanScore
+    ; A = first used position
+
+    cmp diamondh-3 
+    ifAge ; first digit is 1000s
+        ldA >diamondh-3 ; is it also zero?
+        cmp $31
+        bmi e_diamond ; end count
+
+        score1Kx(1)
+
+        ldX diamondh-3 
+        ldY 5
+    else
+        cmp diamondh-4
+        ifeq ; first is 10k
+            score10Kx(1)
+
+            ldX diamondh-4
+            ldY 4
+        else
+            cmp diamondh-5
+            ifeq ; first is 100k
+                score100Kx(1)
+
+                ldX diamondh-5
+                ldY 3
+            else ; first is 1mil
+                score1Mx(1)
+
+                ldX diamondh-6
+                ldY 2
+            endif
+        endif
+    endif
+    ldA 1
+    jsr subtractScore
+
+    ldA sStartExt
+    jsr playSound
+    ldA seShortBad
+    jsr playSound
+
+    ldA >x
+    stA pfX
+
+    wait(64)
+    jmp l_diamond
+e_diamond:
+    ldA >x
+    stA pfX
+
+    ldA sStartCmd
+    jsr playSound
+    ldA ssYoureGood
+    jsr playSound
+cancelDiamondBonus:
+    ldA >gFlags
+    orA DiamondCollectBit
+    stA gFlags
+
+    ldA $20 ; ' '
+    ldX diamonda
+    ldY diamondh-diamonda+1
+    jsr set
+
+    ldA >gFlags
+    and MultiballBit
+    ifne 
+        ldA sAggressiveMusic
+        jsr playSound
+    else
+        ldA sRegMusicVariety
+        jsr playSound
+    endif
+
+    jsr syncDigits
+    
+    rts
 
 
 pop: ; wj
     jsr checkMbInvalid
+    ldA sShortBad
+    jsr playSound
     score1Kx(1)
     lampOff(lSpinner)
     done()
@@ -1405,6 +1629,8 @@ bottomDrop: ; rd
     ldA IgnoreBottomDropBit
     bit >gFlags
     ifeq
+        ldA sLanding
+        jsr playSound
         score10Kx(1)
     endif
     done()
@@ -1416,14 +1642,35 @@ leftOutlane: ; rg
         ldA cKickback
         jsr fireSolenoid
         lampOff(lKickback)
+        ldA sStartExt
+        jsr playSound
+        ldA seRattle
+        jsr playSound
+    else
+        ldA sStartExt
+        jsr playSound
+        ldA seOutlane
+        jsr playSound
     endif
+    jsr checkMbInvalid
+    jsr advBonus
+    score10Kx(1)
+    done()
 rightOutlane: ; rk
+    ldA sStartExt
+    jsr playSound
+    ldA seOutlane
+    jsr playSound
     jsr checkMbInvalid
     jsr advBonus
     score10Kx(1)
     done()
 leftInlane: ; rh
 rightInlane ; rj
+    ldA sStartExt
+    jsr playSound
+    ldA seAh
+    jsr playSound
     jsr checkMbInvalid
     jsr advBonus
     score1Kx(1)
@@ -1448,10 +1695,10 @@ switchCallbacks:
     .dw leftSideLane \.dw pop \.dw laneChange \.dw rightOutlane   \.dw lock         \.dw nothing    \.dw nothing \.dw nothing 
 
 ; todo
+; instant jackpot only with diamonds up?
+; trip other bank via lane
 ; diamonds down in mb
 ; flashers?
 ; diamond values?
 ; x special?
-
-; all spades crash
-; double start
+; royal flush resets drops?

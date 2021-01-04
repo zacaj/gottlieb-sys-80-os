@@ -1,12 +1,12 @@
-#define cBottomDrop #1
-#define cLeftDrop #2
-#define fLeftRamp #3
-#define fTopDome #4
-#define cTopDrop #5
-#define cRightDrop #6
-#define fBottomDome #7
-#define cKnocker #8
-#define cOuthole #9
+#define cBottomDrop 1
+#define cLeftDrop 2
+#define fLeftRamp 3
+#define fTopDome 4
+#define cTopDrop 5
+#define cRightDrop 6
+#define fBottomDome 7
+#define cKnocker 8
+#define cOuthole 9
 #define lBottomTrip lampSol(18,5,0100b)
 #define lBallRelease lampSol(2,1,0100b)
 #define lLock lampSol(13,4,0010b)
@@ -22,9 +22,31 @@
 
 .org U3 + (64*2)
 
+sound:      .equ gameRAM+$00
+
 game_init:
+    ldA lEnableFlippers
+    ;jsr turnOnSolenoid
 game_loop:
+game_timerTick:
+game_afterQueue:
     rts
+
+swGameOver:
+    ldA $12
+    jsr playSound
+    ;ldA $15
+    ;jsr playSound
+
+    inc sound
+    ldA >sound
+    ldA $1B
+    jsr playSound
+    ;ldA $1A
+    ;jsr playSound
+    ;ldA $15
+    ;jsr playSound
+    done()
 
 nothing:
     nop
@@ -40,6 +62,10 @@ queen:
     jmp afterQueueRun
 
 ace: ; yd
+    ldA $11
+    jsr playSound
+    ldA $0D
+    jsr playSound
     ldA lEnableFlippers
     jsr turnOnSolenoid
     jmp afterQueueRun
@@ -85,9 +111,9 @@ lock: ; tk
     jmp afterQueueRun
 
 leftSideLane: ; ak
-    ldA #7
-    ldX #digit21+5
-    ldY #5
+    ldA 7
+    ldX digit21+5
+    ldY 5
     jsr addScore
     jsr refreshDisplays
     jmp afterQueueRun
