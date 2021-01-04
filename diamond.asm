@@ -17,6 +17,7 @@
 #define cEnableFlippers lampSol(0,1,0001b)
 #define cTilt lampSol(1,1,0010b)
 
+#define lTilt 1
 #define lShootAgain 3
 #define lJokerSpecial 5
 #define lAce100k 6
@@ -277,7 +278,32 @@ startAttract:
     stA lamp1+12
 
     rts
+tilt: ; ih
+    ldA cTilt
+    jsr turnOnSolenoid
+    ldA cEnableFlippers
+    jsr turnOffSolenoid
 
+    ldY t_tilt-textStart
+    jsr setAtoOtherDisplay
+    tAX
+    jsr writeText
+
+    ldA sStopMusic
+    jsr playSound
+
+    ldA sStartExt
+    jsr playSound
+    ldA seLaugh
+    jsr playSound
+
+    done()
+
+swTilt:
+    cmp $46 ; trough  ug
+    ifeq
+        jmp trough
+    endif
 swGameOver:
     cmp $47 ; startButton button  ih
     ifeq
@@ -292,15 +318,13 @@ swGameOver:
     ifeq
         jmp outhole
     endif
-    cmp $74 ; lock
+    cmp $74 ; lock  tk
     ifeq
         wait(300)
         ldA cLock
         jsr fireSolenoid
         done()
     endif
-    ldA sCoin
-    jsr playSound
     done()
 
 startGame:
@@ -313,7 +337,7 @@ startGame:
     stA gFlags
 
 
-    ldA >sDealTheHand
+    ldA sDealTheHand
     jsr playSound
     wait(1600)
 
@@ -355,6 +379,11 @@ startBall: ; no exit
     ldA 0
     stA gFlags
     stA rampTimer
+
+    ldA cTilt
+    jsr turnOffSolenoid
+    ldA cEnableFlippers
+    jsr turnOnSolenoid
 
     ; turn off all lights
     ldA 0
@@ -439,6 +468,8 @@ startBall: ; no exit
     stA skillshotTimer
 
 releaseBall: ; no exit
+    ldA sRegMusicRepeat
+    jsr playSound
     ldA sBallStart
     jsr playSound
 
@@ -461,6 +492,12 @@ startButton:
         ldA $30 ; '0'
         stA p2h-0
         stA p2h-1
+        
+        ldA sStartCmd
+        jsr playSound
+        ldA ssComeOnTryMe
+        jsr playSound
+
         jmp playerAdded
     endif
 
@@ -470,6 +507,12 @@ startButton:
         ldA $30 ; '0'
         stA p3h-0
         stA p3h-1
+        
+        ldA sStartCmd
+        jsr playSound
+        ldA ssGiveMeYourBestShot
+        jsr playSound
+
         jmp playerAdded
     endif
 
@@ -479,8 +522,16 @@ startButton:
         ldA $30 ; '0'
         stA p4h-0
         stA p4h-1
+
+        ldA sStartCmd
+        jsr playSound
+        ldA ssWowThatsABigOne
+        jsr playSound
+
         jmp playerAdded
     endif
+
+    done()
 playerAdded:
     jsr syncDigits
     done()
@@ -527,6 +578,10 @@ trough: ; ug
     endif
 
     ; end ball
+
+    ldA lb(lTilt)
+    bit >lc(lTilt)
+    ifeq
 
     ldA sBonus
     jsr playSound
@@ -577,6 +632,10 @@ l_bonus:
 e_bonus:
 
     wait(300)
+    
+    ldA sStopMusic
+    jsr playSound
+    endif ; tilt check
 
     ; ball done, store status
     ldX >curPlayer
@@ -619,9 +678,6 @@ e_bonus:
         orA p_flags, X
         stA p_flags, X
     endif
-    
-    ldA sStopMusic
-    jsr playSound
 
     ; advance game
     
@@ -648,6 +704,7 @@ nextBall:
         ldA >curBall
         cmp $34 ; '4'
         ifAge ; game over
+
             ldA sStartExt
             jsr playSound
             ldA seGameOver
@@ -1084,6 +1141,10 @@ joker: ; yf
         stA p_jackpot, X
         jsr syncJackpot
     else
+        ldA sStartExt
+        jsr playSound
+        ldA seLaugh
+        jsr playSound
         score1Kx(5)
     endif
     done()
@@ -1682,6 +1743,7 @@ t_switch:   .text " SWITCH XX \000"
 t_bonus:    .text "BONUS =  XX XXXXXXXX\000"
 t_diamond:  .text "DIAMOND  =  XXXXXXXX\000"
 t_dBonus:   .text " BONUS   =  XXXXXXXX\000"
+t_tilt:     .text "        TILT        \000"
 
 .org U3
 switchCallbacks:
@@ -1690,7 +1752,7 @@ switchCallbacks:
     .dw left1 \.dw top1 \.dw right1           \.dw bottomDrop     \.dw ten          \.dw ace        \.dw king \.dw nothing 
     .dw left2 \.dw top2 \.dw right2           \.dw sling          \.dw jack         \.dw joker      \.dw queen   \.dw nothing 
     .dw left3 \.dw top3 \.dw right3           \.dw leftOutlane    \.dw ramp         \.dw leftLane   \.dw trough  \.dw startButton 
-    .dw left4 \.dw top4 \.dw right4           \.dw leftInlane     \.dw leftSpinner  \.dw rightLane  \.dw nothing \.dw nothing 
+    .dw left4 \.dw top4 \.dw right4           \.dw leftInlane     \.dw leftSpinner  \.dw rightLane  \.dw nothing \.dw tilt 
     .dw left5 \.dw pop  \.dw right5           \.dw rightInlane    \.dw rightSpinner \.dw skillshot  \.dw outhole \.dw nothing 
     .dw leftSideLane \.dw pop \.dw laneChange \.dw rightOutlane   \.dw lock         \.dw nothing    \.dw nothing \.dw nothing 
 

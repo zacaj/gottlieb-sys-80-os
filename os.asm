@@ -286,27 +286,38 @@ l_switch:
                     jsr setXtoEmptyQueue
                     stX curQueue
 
-                    ; check if in game over or not
-                    ldA 00000001b
+                    ; check if tilted
+                    ldA 00000010b
                     bit >lamp1
-
-                    ifeq 
-                        ; in game over
+                    ifne
+                        ; tilted
                         ldX >curQueue
-                        ldA swGameOver&$FF
+                        ldA swTilt&$FF
                         stA 0, X
-                        ldA swGameOver>>8
+                        ldA swTilt>>8
                         stA queueHigh-queueLow, X
-                    else ; not in game over
-                        ; store address in queue
-                        ldX >switchY
-                        ldA switchCallbacks+1, X
-                        ldX >curQueue
-                        stA queueHigh-queueLow, X
-                        ldX >switchY
-                        ldA switchCallbacks+0, X
-                        ldX >curQueue
-                        stA 0, X
+                    else
+                        ; check if in game over or not
+                        ldA 00000001b
+                        bit >lamp1
+                        ifeq 
+                            ; in game over
+                            ldX >curQueue
+                            ldA swGameOver&$FF
+                            stA 0, X
+                            ldA swGameOver>>8
+                            stA queueHigh-queueLow, X
+                        else ; not in game over
+                            ; store address in queue
+                            ldX >switchY
+                            ldA switchCallbacks+1, X
+                            ldX >curQueue
+                            stA queueHigh-queueLow, X
+                            ldX >switchY
+                            ldA switchCallbacks+0, X
+                            ldX >curQueue
+                            stA 0, X
+                        endif
                     endif
 
                     ; compute switch number
